@@ -219,7 +219,7 @@
       margin-top:6px;
     }
 
-    .actions,
+        .actions,
     .secondary-actions{
       display:flex;
       gap:10px;
@@ -228,22 +228,83 @@
     }
 
     .btn{
-      border:none;
+      border:1px solid transparent;
       border-radius:12px;
-      padding:12px 16px;
+      min-height:46px;
+      padding:0 16px;
       font-size:14px;
       font-weight:700;
       cursor:pointer;
+      transition:all .18s ease;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      white-space:nowrap;
+      text-decoration:none;
     }
 
-    .btn-primary{ background:var(--brand); color:#fff; }
-    .btn-secondary{ background:#edf2fa; color:var(--brand-dark); }
-    .btn-dark{ background:var(--brand-dark); color:#fff; }
-    .btn-warning{ background:#fff8e6; color:#825400; border:1px solid #f2d27c; }
+    .btn:hover:not(:disabled){
+      transform:translateY(-1px);
+    }
+
+    .btn:active:not(:disabled){
+      transform:translateY(0);
+    }
 
     .btn:disabled{
-      opacity:.65;
+      opacity:.55;
       cursor:not-allowed;
+      box-shadow:none;
+      transform:none;
+    }
+
+    .btn-primary{
+      background:#0052cc;
+      color:#fff;
+      box-shadow:0 6px 16px rgba(0,82,204,.18);
+    }
+
+    .btn-primary:hover:not(:disabled){
+      background:#0047b3;
+    }
+
+    .btn-neutral{
+      background:#fff;
+      color:#223b53;
+      border-color:#d7dfeb;
+    }
+
+    .btn-neutral:hover:not(:disabled){
+      background:#f7faff;
+      border-color:#bfd0ea;
+    }
+
+    .btn-secondary-strong{
+      background:#0f2747;
+      color:#fff;
+      box-shadow:0 6px 16px rgba(15,39,71,.16);
+    }
+
+    .btn-secondary-strong:hover:not(:disabled){
+      background:#0c213d;
+    }
+
+    .btn-alt{
+      background:#eef4ff;
+      color:#0f2747;
+      border-color:#d9e6ff;
+    }
+
+    .btn-alt:hover:not(:disabled){
+      background:#e3eeff;
+    }
+
+    .btn-edit-active{
+      background:#e8f1ff;
+      color:#0052cc;
+      border-color:#bcd3ff;
+      box-shadow:0 4px 12px rgba(0,82,204,.10);
     }
 
     .preview-shell{
@@ -540,9 +601,9 @@
           </div>
         </div>
 
-                <div class="actions input-actions">
+                 <div class="actions input-actions">
           <button id="generateBtn" class="btn btn-primary" onclick="buildLesson()">Generate Lesson</button>
-          <button class="btn btn-secondary" onclick="resetForm()">Reset</button>
+          <button class="btn btn-neutral" onclick="resetForm()">Reset</button>
         </div>
 
         <div id="status" class="status"></div>
@@ -580,11 +641,11 @@
               </div>
             </div>
 
-            <div class="preview-actions">
-              <button id="editBtn" class="btn btn-secondary" onclick="toggleEditMode()" disabled>Enable Editing</button>
-              <button class="btn btn-secondary" onclick="showAllAnswers()" id="showAnswersBtn" disabled>Show Answers</button>
-              <button id="printStudentBtn" class="btn btn-dark" onclick="printLesson('STUDENT')" disabled>Print / Save Student PDF</button>
-              <button id="printTeacherBtn" class="btn btn-warning" onclick="printLesson('TEACHER')" disabled>Print / Save Teacher PDF</button>
+                        <div class="preview-actions">
+              <button id="editBtn" class="btn btn-neutral" onclick="toggleEditMode()" disabled>Edit Preview</button>
+              <button class="btn btn-neutral" onclick="showAllAnswers()" id="showAnswersBtn" disabled>Show Answers</button>
+              <button id="printStudentBtn" class="btn btn-secondary-strong" onclick="printLesson('STUDENT')" disabled>Export Student PDF</button>
+              <button id="printTeacherBtn" class="btn btn-alt" onclick="printLesson('TEACHER')" disabled>Export Teacher PDF</button>
             </div>
           </div>
         </div>
@@ -693,7 +754,7 @@
           document.getElementById('outputView').className = '';
           document.getElementById('outputView').innerHTML = res.html;
           renderMathInPreview();
-          document.getElementById('editBtn').textContent = 'Enable Editing';
+                    updateEditButtonState();
           updatePreviewChrome();
           document.getElementById('editBtn').disabled = false;
           document.getElementById('printStudentBtn').disabled = false;
@@ -734,6 +795,7 @@ disableEditMode(true);
           renderMathInPreview();
           hasManualEdits = false;
           updatePreviewChrome();
+          updateEditButtonState();
           setStatus('Preview mode updated.', 'success');
         })
         .withFailureHandler(function (err) {
@@ -750,6 +812,20 @@ disableEditMode(true);
       const mode = document.getElementById('previewMode').value;
       document.getElementById('modeBadge').textContent = mode === 'TEACHER' ? 'Teacher Copy' : 'Student Copy';
     }
+        function updateEditButtonState() {
+      const btn = document.getElementById('editBtn');
+      if (!btn) return;
+
+      btn.classList.remove('btn-neutral', 'btn-edit-active');
+
+      if (editMode) {
+        btn.textContent = 'Done Editing';
+        btn.classList.add('btn-edit-active');
+      } else {
+        btn.textContent = 'Edit Preview';
+        btn.classList.add('btn-neutral');
+      }
+    }
 
     function toggleEditMode() {
       if (!currentLesson) return;
@@ -762,7 +838,7 @@ disableEditMode(true);
         el.classList.toggle('active-edit', editMode);
       });
 
-      document.getElementById('editBtn').textContent = editMode ? 'Disable Editing' : 'Enable Editing';
+      updateEditButtonState();
 
       if (editMode) {
         setStatus('Editing enabled. Formulas remain fixed, but text edits can be synced before printing or rerendering.', 'warn');
@@ -781,13 +857,12 @@ disableEditMode(true);
         el.classList.remove('active-edit');
       });
 
-      document.getElementById('editBtn').textContent = 'Enable Editing';
+      updateEditButtonState();
 
       if (!silent) {
         setStatus('Editing disabled.', '');
       }
     }
-
     document.addEventListener('input', function (evt) {
       if (evt.target && evt.target.classList && evt.target.classList.contains('editable')) {
         hasManualEdits = true;
@@ -1021,7 +1096,7 @@ disableEditMode(true);
       document.getElementById('printTeacherBtn').disabled = true;
       document.getElementById('editBtn').disabled = true;
       document.getElementById('showAnswersBtn').disabled = true;
-
+      updateEditButtonState();
       document.getElementById('outputView').className = 'placeholder';
       document.getElementById('outputView').innerHTML = `
   <div class="empty-state-minimal">
