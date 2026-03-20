@@ -345,6 +345,8 @@ function buildPrompt_(request) {
   const templateGuidance = getTemplateGuidance_(request.templateType);
   const templateFieldBehavior = getTemplateFieldBehavior_(request.templateType);
   const localContextGuidance = getLocalContextGuidance_();
+  const difficultyGuidance = getDifficultyGuidance_(request.difficulty);
+  const practiceDesignGuidance = getPracticeDesignGuidance_(request.templateType, request.difficulty);
 
   return [
     'You are an expert instructional content generator for classroom teachers.',
@@ -415,6 +417,12 @@ function buildPrompt_(request) {
     'Template-specific field behavior:',
     templateFieldBehavior,
     '',
+    'Difficulty-specific guidance:',
+    difficultyGuidance,
+    '',
+    'Practice design guidance:',
+practiceDesignGuidance,
+'',
     'Quality expectations:',
     '- lessonSummary must be genuinely useful for classroom instruction and must fit the selected template.',
     '- successCriteria must be student-friendly and measurable.',
@@ -723,6 +731,103 @@ function getLocalContextGuidance_() {
     '- Prefer pesos (₱), metric units, and familiar school or community-based situations when appropriate.',
     '- Use age-appropriate local names and realistic classroom-friendly contexts.'
   ].join('\n');
+}
+
+function getDifficultyGuidance_(difficulty) {
+  const d = String(difficulty || 'ON_LEVEL').toUpperCase();
+
+  if (d === 'BELOW_LEVEL') {
+    return [
+      '- Use simpler wording, shorter sentences, and more concrete examples.',
+      '- Keep explanations highly accessible and reduce unnecessary abstraction.',
+      '- Break ideas into smaller and more manageable steps.',
+      '- Practice items should begin with direct, confidence-building questions.',
+      '- Use easier early items and smaller jumps in difficulty.',
+      '- Prefer clarity, support, and strong scaffolding over complexity.'
+    ].join('\n');
+  }
+
+  if (d === 'ABOVE_LEVEL') {
+    return [
+      '- Use richer reasoning, stronger conceptual connections, and more demanding application.',
+      '- Allow greater complexity while keeping the lesson age-appropriate.',
+      '- Practice items should include more multi-step reasoning and less routine repetition.',
+      '- Later items should require transfer, comparison, justification, or deeper analysis when appropriate.',
+      '- Increase the thinking demand, not just the size of the numbers or the length of the wording.',
+      '- Keep the content challenging but still clear and classroom-usable.'
+    ].join('\n');
+  }
+
+  return [
+    '- Use grade-appropriate wording, pacing, and conceptual demand.',
+    '- Balance clarity, independence, and reasonable challenge.',
+    '- Practice items should move through a standard progression from understanding to application.',
+    '- Maintain normal grade-level expectations for vocabulary, explanation, and reasoning.'
+  ].join('\n');
+}
+
+function getPracticeDesignGuidance_(templateType, difficulty) {
+  const t = String(templateType || DEFAULT_TEMPLATE).toUpperCase();
+  const d = String(difficulty || 'ON_LEVEL').toUpperCase();
+  const rules = [];
+
+  if (t === 'GUIDED_PRACTICE') {
+    rules.push(
+      '- For GUIDED_PRACTICE, sequence practice items from most accessible to more independent.',
+      '- The early items should feel supported and direct.',
+      '- Later items may require more independence, but the progression must stay smooth.'
+    );
+  } else if (t === 'REVIEW') {
+    rules.push(
+      '- For REVIEW, use representative mixed review across the topic.',
+      '- Include a balanced spread of recall and straightforward application.',
+      '- Keep item wording concise and easy to scan.'
+    );
+  } else if (t === 'QUIZ') {
+    rules.push(
+      '- For QUIZ, all practice items must function as assessment items rather than guided activities.',
+      '- Use neutral, direct, test-style wording.',
+      '- Keep the sequence balanced and formal.'
+    );
+  } else if (t === 'REMEDIATION') {
+    rules.push(
+      '- For REMEDIATION, begin with highly accessible items and increase independence gradually.',
+      '- The early items should reduce cognitive load and build confidence.',
+      '- Keep wording very clear and concrete.'
+    );
+  } else if (t === 'ENRICHMENT') {
+    rules.push(
+      '- For ENRICHMENT, make later items more demanding than earlier ones.',
+      '- Include non-routine application, pattern recognition, transfer, comparison, or deeper reasoning.',
+      '- Ensure the practice is challenging through thinking demand, not just bigger numbers.'
+    );
+  } else {
+    rules.push(
+      '- For CONCEPT, move from understanding toward application in a balanced way.',
+      '- Start with direct understanding items, then progress toward application.'
+    );
+  }
+
+  if (d === 'BELOW_LEVEL') {
+    rules.push(
+      '- Because the difficulty is BELOW_LEVEL, use shorter, clearer, and more direct questions.',
+      '- The first half of the items should be especially accessible and confidence-building.',
+      '- Keep reasoning demand moderate and avoid large jumps in complexity.'
+    );
+  } else if (d === 'ABOVE_LEVEL') {
+    rules.push(
+      '- Because the difficulty is ABOVE_LEVEL, increase reasoning demand across the set.',
+      '- Include more multi-step, comparison, transfer, or justification items, especially in the later portion.',
+      '- Raise the conceptual challenge while keeping wording age-appropriate and clear.'
+    );
+  } else {
+    rules.push(
+      '- Because the difficulty is ON_LEVEL, maintain a standard grade-level progression from understanding to application.',
+      '- Keep the overall challenge balanced and appropriate for the selected grade level.'
+    );
+  }
+
+  return rules.join('\n');
 }
 
 /***************************************
