@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <base target="_top">
   <meta charset="utf-8">
@@ -9,80 +10,82 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
   <style>
-    * { box-sizing: border-box; }
-
-    :root{
-      --brand:#0052cc;
-      --brand-dark:#0f2747;
-      --bg:#f5f7fb;
-      --line:#dfe3eb;
-      --text:#172b4d;
-      --muted:#5b6b82;
-      --success:#0c6b2f;
-      --error:#b42318;
-      --card:#ffffff;
-      --warn:#f59e0b;
+    * {
+      box-sizing: border-box;
     }
 
-    body{
-      margin:0;
-      font-family:Arial, Helvetica, sans-serif;
-      background:var(--bg);
-      color:var(--text);
+    :root {
+      --brand: #0052cc;
+      --brand-dark: #0f2747;
+      --bg: #f5f7fb;
+      --line: #dfe3eb;
+      --text: #172b4d;
+      --muted: #5b6b82;
+      --success: #0c6b2f;
+      --error: #b42318;
+      --card: #ffffff;
+      --warn: #f59e0b;
     }
 
-    .shell{
-      max-width:1320px;
-      margin:28px auto;
-      padding:0 20px;
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
     }
 
-    .hero{
-      background:linear-gradient(135deg, #0b57d0 0%, #0f2747 62%, #081a33 100%);
-      color:#fff;
-      border-radius:22px;
-      padding:20px 22px;
-      box-shadow:0 10px 26px rgba(15, 39, 71, 0.14);
+    .shell {
+      max-width: 1320px;
+      margin: 28px auto;
+      padding: 0 20px;
     }
 
-    .hero-main{
-      max-width:860px;
+    .hero {
+      background: linear-gradient(135deg, #0b57d0 0%, #0f2747 62%, #081a33 100%);
+      color: #fff;
+      border-radius: 22px;
+      padding: 20px 22px;
+      box-shadow: 0 10px 26px rgba(15, 39, 71, 0.14);
     }
 
-    .hero h1{
-      margin:0;
-      font-size:28px;
-      line-height:1.1;
-      letter-spacing:-0.01em;
+    .hero-main {
+      max-width: 860px;
     }
 
-    .hero p{
-      margin:10px 0 0;
-      font-size:14px;
-      line-height:1.6;
-      color:rgba(255, 255, 255, 0.92);
+    .hero h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
     }
 
-    @media (max-width: 760px){
-      .hero{
-        padding:18px;
+    .hero p {
+      margin: 10px 0 0;
+      font-size: 14px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.92);
+    }
+
+    @media (max-width: 760px) {
+      .hero {
+        padding: 18px;
       }
 
-      .hero h1{
-        font-size:24px;
+      .hero h1 {
+        font-size: 24px;
       }
 
-      .hero p{
-        font-size:13px;
+      .hero p {
+        font-size: 13px;
       }
     }
 
-    .grid{
-      display:grid;
-      grid-template-columns:420px 1fr;
-      gap:20px;
-      margin-top:20px;
-      align-items:start;
+    .grid {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 20px;
+      margin-top: 20px;
+      align-items: start;
     }
 
     .panel,
@@ -95,11 +98,11 @@
     }
 
     .panel h2,
-    .preview-title{
-      margin:0 0 14px;
-      font-size:18px;
-      color:var(--brand-dark);
-      font-weight:700;
+    .preview-title {
+      margin: 0 0 14px;
+      font-size: 18px;
+      color: var(--brand-dark);
+      font-weight: 700;
     }
 
     .panel-section {
@@ -162,192 +165,355 @@
       line-height: 1.7;
     }
 
-    .field{
-      margin-bottom:14px;
+    .field {
+      margin-bottom: 14px;
     }
 
-    .field label{
-      display:block;
-      margin-bottom:6px;
-      font-size:12px;
-      font-weight:700;
-      color:var(--muted);
-      text-transform:uppercase;
-      letter-spacing:.04em;
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
     }
 
     .field input,
     .field select,
-    .field textarea{
-      width:100%;
-      border:1px solid #c8d1dc;
-      border-radius:12px;
-      padding:12px 14px;
-      font-size:14px;
-      outline:none;
-      background:#fff;
-      color:var(--text);
+    .field textarea {
+      width: 100%;
+      border: 1px solid #c8d1dc;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+      color: var(--text);
     }
 
-    .field textarea{
-      min-height:76px;
-      resize:vertical;
+    .field textarea {
+      min-height: 76px;
+      resize: vertical;
     }
 
-    .checkbox-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px 14px;
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 14px;
     }
 
-    .check{
-      display:flex;
-      gap:8px;
-      align-items:flex-start;
-      font-size:13px;
-      color:var(--text);
+    .check {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      font-size: 13px;
+      color: var(--text);
     }
 
-    .check input{
-      margin-top:2px;
+    .check input {
+      margin-top: 2px;
     }
 
-    .help-note{
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.5;
-      margin-top:6px;
+    .help-note {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 6px;
     }
 
     .actions,
-    .secondary-actions{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-top:16px;
+    .secondary-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
     }
 
-    .btn{
-      border:none;
-      border-radius:12px;
-      padding:12px 16px;
-      font-size:14px;
-      font-weight:700;
-      cursor:pointer;
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 12px;
+      min-height: 46px;
+      padding: 0 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .18s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+      text-decoration: none;
     }
 
-    .btn-primary{ background:var(--brand); color:#fff; }
-    .btn-secondary{ background:#edf2fa; color:var(--brand-dark); }
-    .btn-dark{ background:var(--brand-dark); color:#fff; }
-    .btn-warning{ background:#fff8e6; color:#825400; border:1px solid #f2d27c; }
-
-    .btn:disabled{
-      opacity:.65;
-      cursor:not-allowed;
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
     }
 
-    .preview-shell{
-      min-height:720px;
+    .btn:active:not(:disabled) {
+      transform: translateY(0);
     }
 
-    .preview-toolbar{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      flex-wrap:wrap;
-      margin-bottom:14px;
-      padding-bottom:14px;
-      border-bottom:1px solid var(--line);
+    .btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
     }
 
-    .toolbar-group{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
+    .btn-primary {
+      background: #0052cc;
+      color: #fff;
+      box-shadow: 0 6px 16px rgba(0, 82, 204, .18);
     }
 
-    .status{
-      font-size:13px;
-      color:var(--muted);
-      margin-top:10px;
-      min-height:18px;
-      line-height:1.4;
+    .btn-primary:hover:not(:disabled) {
+      background: #0047b3;
     }
 
-    .status.error{ color:var(--error); font-weight:700; }
-    .status.success{ color:var(--success); font-weight:700; }
-    .status.warn{ color:#8a5a00; font-weight:700; }
-
-    .placeholder{
-      display:grid;
-      place-items:center;
-      min-height:580px;
-      text-align:center;
-      color:var(--muted);
-      border:2px dashed #d7dfeb;
-      border-radius:18px;
-      padding:24px;
-      background:#fbfcff;
-      line-height:1.7;
+    .btn-neutral {
+      background: #fff;
+      color: #223b53;
+      border-color: #d7dfeb;
     }
 
-    .mini-badge{
-      display:inline-flex;
-      align-items:center;
-      padding:6px 10px;
-      border-radius:999px;
-      background:#f5f9ff;
-      border:1px solid #d9e6ff;
-      font-size:12px;
-      color:var(--brand-dark);
-      font-weight:700;
+    .btn-neutral:hover:not(:disabled) {
+      background: #f7faff;
+      border-color: #bfd0ea;
     }
 
-    @media (max-width: 1080px){
-      .grid{ grid-template-columns:1fr; }
+    .btn-secondary-strong {
+      background: #0f2747;
+      color: #fff;
+      box-shadow: 0 6px 16px rgba(15, 39, 71, .16);
     }
 
-    @media (max-width: 760px){
-      .checkbox-grid{ grid-template-columns:1fr; }
+    .btn-secondary-strong:hover:not(:disabled) {
+      background: #0c213d;
     }
 
-    <?!= getLessonStyles_() ?>
+    .btn-alt {
+      background: #eef4ff;
+      color: #0f2747;
+      border-color: #d9e6ff;
+    }
 
-  /* Minimalist empty state styling */
-.empty-state-minimal {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: var(--muted);
-  text-align: center;
-  max-width: 420px;
-  margin: 0 auto;
-}
+    .btn-alt:hover:not(:disabled) {
+      background: #e3eeff;
+    }
 
-.empty-icon-minimal {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  display: grid;
-  place-items: center;
-  font-size: 24px;
-  color: var(--brand);
-  background: #f5f9ff;
-  border: 1px solid #d9e6ff;
-}
+    .btn-edit-active {
+      background: #e8f1ff;
+      color: #0052cc;
+      border-color: #bcd3ff;
+      box-shadow: 0 4px 12px rgba(0, 82, 204, .10);
+    }
 
-.empty-state-minimal p {
-  margin: 0;
-  font-size: 14px;
-  max-width: 420px;
-  line-height: 1.6;
-}
+    .preview-shell {
+      min-height: 720px;
+    }
+
+    .preview-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .toolbar-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .input-actions {
+      justify-content: flex-start;
+    }
+
+    .preview-toolbar-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .preview-toolbar-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #e8edf6;
+    }
+
+    .preview-selects {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .preview-field {
+      min-width: 180px;
+    }
+
+    .preview-field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .preview-field select {
+      width: 100%;
+      border: 1px solid #c8d1dc;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .preview-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .status {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 10px;
+      min-height: 18px;
+      line-height: 1.4;
+    }
+
+    .status.error {
+      color: var(--error);
+      font-weight: 700;
+    }
+
+    .status.success {
+      color: var(--success);
+      font-weight: 700;
+    }
+
+    .status.warn {
+      color: #8a5a00;
+      font-weight: 700;
+    }
+
+    .placeholder {
+      display: grid;
+      place-items: center;
+      min-height: 580px;
+      text-align: center;
+      color: var(--muted);
+      border: 2px dashed #d7dfeb;
+      border-radius: 18px;
+      padding: 24px;
+      background: #fbfcff;
+      line-height: 1.7;
+    }
+
+    .mini-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f5f9ff;
+      border: 1px solid #d9e6ff;
+      font-size: 12px;
+      color: var(--brand-dark);
+      font-weight: 700;
+    }
+
+    @media (max-width: 1080px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .checkbox-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-toolbar-top {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .preview-toolbar-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .preview-selects {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .preview-field {
+        min-width: 0;
+      }
+
+      .preview-actions {
+        justify-content: flex-start;
+      }
+    }
+
+    <? !=getLessonStyles_() ?>
+
+    /* Minimalist empty state styling */
+    .empty-state-minimal {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--muted);
+      text-align: center;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    .empty-icon-minimal {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      color: var(--brand);
+      background: #f5f9ff;
+      border: 1px solid #d9e6ff;
+    }
+
+    .empty-state-minimal p {
+      margin: 0;
+      font-size: 14px;
+      max-width: 420px;
+      line-height: 1.6;
+    }
   </style>
 </head>
+
 <body>
   <div class="shell">
     <div class="hero">
@@ -362,7 +528,7 @@
 
     <div class="grid">
       <div class="panel">
-        <h2>Lesson Inputs</h2>
+        <h2>Lesson Setup</h2>
 
         <div class="panel-section">
           <div class="section-heading">Core Details</div>
@@ -429,26 +595,6 @@
           </div>
         </div>
 
-        <div class="panel-section">
-          <div class="section-heading">Layout and Print</div>
-
-          <div class="field">
-            <label for="previewMode">Preview Mode</label>
-            <select id="previewMode" onchange="rerenderPreviewMode()">
-              <option value="STUDENT" selected>Student Copy</option>
-              <option value="TEACHER">Teacher Copy</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="layoutMode">Layout Density</label>
-            <select id="layoutMode" onchange="rerenderPreviewMode()">
-              <option value="COMPACT">Compact</option>
-              <option value="STANDARD" selected>Standard</option>
-              <option value="SPACIOUS">Spacious</option>
-            </select>
-          </div>
-        </div>
 
         <div class="panel-section">
           <div class="section-heading">Header and Footer</div>
@@ -474,15 +620,9 @@
           </div>
         </div>
 
-        <div class="actions">
+        <div class="actions input-actions">
           <button id="generateBtn" class="btn btn-primary" onclick="buildLesson()">Generate Lesson</button>
-          <button class="btn btn-secondary" onclick="resetForm()">Reset</button>
-          <button id="editBtn" class="btn btn-secondary" onclick="toggleEditMode()" disabled>Enable Editing</button>
-        </div>
-
-        <div class="secondary-actions">
-          <button id="printStudentBtn" class="btn btn-dark" onclick="printLesson('STUDENT')" disabled>Print / Save Student PDF</button>
-          <button id="printTeacherBtn" class="btn btn-warning" onclick="printLesson('TEACHER')" disabled>Print / Save Teacher PDF</button>
+          <button class="btn btn-neutral" onclick="resetForm()">Reset</button>
         </div>
 
         <div id="status" class="status"></div>
@@ -490,13 +630,43 @@
 
       <div class="preview-shell">
         <div class="preview-toolbar">
-          <div>
-            <div class="preview-title">Lesson Preview</div>
-            <div class="help-note">Preview can be edited. Print uses the structured lesson data plus your synced text edits.</div>
+          <div class="preview-toolbar-top">
+            <div>
+              <div class="preview-title">Preview & Export</div>
+              <div class="help-note">Adjust the view, edit the generated lesson, reveal answers, and export student or
+                teacher copies.</div>
+            </div>
+            <div class="toolbar-group">
+              <span class="mini-badge" id="modeBadge">Student Copy</span>
+            </div>
           </div>
-          <div class="toolbar-group">
-            <span class="mini-badge" id="modeBadge">Student Copy</span>
-            <button class="btn btn-secondary" onclick="showAllAnswers()" id="showAnswersBtn" disabled>Show Answers</button>
+
+          <div class="preview-toolbar-controls">
+            <div class="preview-selects">
+              <div class="preview-field">
+                <label for="previewMode">Preview Mode</label>
+                <select id="previewMode" onchange="rerenderPreviewMode()">
+                  <option value="STUDENT" selected>Student Copy</option>
+                  <option value="TEACHER">Teacher Copy</option>
+                </select>
+              </div>
+
+              <div class="preview-field">
+                <label for="layoutMode">Layout Density</label>
+                <select id="layoutMode" onchange="rerenderPreviewMode()">
+                  <option value="COMPACT">Compact</option>
+                  <option value="STANDARD" selected>Standard</option>
+                  <option value="SPACIOUS">Spacious</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="preview-actions">
+              <button id="editBtn" class="btn btn-neutral" onclick="toggleEditMode()" disabled>Edit Preview</button>
+              <button class="btn btn-neutral" onclick="showAllAnswers()" id="showAnswersBtn" disabled>Show Answers</button>
+              <button id="printStudentBtn" class="btn btn-secondary-strong" onclick="printLesson('STUDENT')" disabled>Export Student PDF</button>
+              <button id="printTeacherBtn" class="btn btn-alt" onclick="printLesson('TEACHER')" disabled>Export Teacher PDF</button>
+            </div>
           </div>
         </div>
 
@@ -604,7 +774,7 @@
           document.getElementById('outputView').className = '';
           document.getElementById('outputView').innerHTML = res.html;
           renderMathInPreview();
-          document.getElementById('editBtn').textContent = 'Enable Editing';
+                    updateEditButtonState();
           updatePreviewChrome();
           document.getElementById('editBtn').disabled = false;
           document.getElementById('printStudentBtn').disabled = false;
@@ -645,6 +815,7 @@ disableEditMode(true);
           renderMathInPreview();
           hasManualEdits = false;
           updatePreviewChrome();
+          updateEditButtonState();
           setStatus('Preview mode updated.', 'success');
         })
         .withFailureHandler(function (err) {
@@ -661,6 +832,20 @@ disableEditMode(true);
       const mode = document.getElementById('previewMode').value;
       document.getElementById('modeBadge').textContent = mode === 'TEACHER' ? 'Teacher Copy' : 'Student Copy';
     }
+        function updateEditButtonState() {
+      const btn = document.getElementById('editBtn');
+      if (!btn) return;
+
+      btn.classList.remove('btn-neutral', 'btn-edit-active');
+
+      if (editMode) {
+        btn.textContent = 'Done Editing';
+        btn.classList.add('btn-edit-active');
+      } else {
+        btn.textContent = 'Edit Preview';
+        btn.classList.add('btn-neutral');
+      }
+    }
 
     function toggleEditMode() {
       if (!currentLesson) return;
@@ -673,7 +858,7 @@ disableEditMode(true);
         el.classList.toggle('active-edit', editMode);
       });
 
-      document.getElementById('editBtn').textContent = editMode ? 'Disable Editing' : 'Enable Editing';
+      updateEditButtonState();
 
       if (editMode) {
         setStatus('Editing enabled. Formulas remain fixed, but text edits can be synced before printing or rerendering.', 'warn');
@@ -692,13 +877,12 @@ disableEditMode(true);
         el.classList.remove('active-edit');
       });
 
-      document.getElementById('editBtn').textContent = 'Enable Editing';
+      updateEditButtonState();
 
       if (!silent) {
         setStatus('Editing disabled.', '');
       }
     }
-
     document.addEventListener('input', function (evt) {
       if (evt.target && evt.target.classList && evt.target.classList.contains('editable')) {
         hasManualEdits = true;
@@ -932,7 +1116,7 @@ disableEditMode(true);
       document.getElementById('printTeacherBtn').disabled = true;
       document.getElementById('editBtn').disabled = true;
       document.getElementById('showAnswersBtn').disabled = true;
-
+      updateEditButtonState();
       document.getElementById('outputView').className = 'placeholder';
       document.getElementById('outputView').innerHTML = `
   <div class="empty-state-minimal">
@@ -948,4 +1132,5 @@ disableEditMode(true);
     updatePreviewChrome();
   </script>
 </body>
+
 </html>
