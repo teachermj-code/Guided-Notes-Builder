@@ -24,6 +24,7 @@ function doGet() {
  ***************************************/
 function getLessonStyles_() {
   return [
+    '.guided-example-title{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--template-accent-dark);margin-bottom:12px;}',
     '.lesson-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px;}',
     '.lesson-sheet{--template-accent:#0052cc;--template-accent-dark:#0f2747;--template-soft-bg:#f5f9ff;--template-soft-border:#d9e6ff;--template-subtle-bg:#fafcff;--template-subtle-border:#e5ebf5;max-width:900px;margin:0 auto;padding:24px;}',
     '.lesson-sheet.layout-compact{padding:18px;}',
@@ -51,7 +52,7 @@ function getLessonStyles_() {
     '.lesson-sheet.layout-compact .card{padding:14px;margin-bottom:10px;}',
     '.lesson-sheet.layout-spacious .card{padding:22px;margin-bottom:18px;}',
     '.concept-card,.practice-card{break-inside:avoid;page-break-inside:avoid;}',
-    '.concept-title{margin:0 0 8px;font-size:16px;color:#102a43;}',
+  '.concept-title{margin:0 0 10px;font-size:16px;color:#102a43;line-height:1.35;}',
     '.concept-summary{margin:0 0 12px;font-size:14px;line-height:1.7;}',
     '.formula-box{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:12px;padding:12px;margin-bottom:12px;}',
     '.formula-label{font-size:11px;font-weight:700;text-transform:uppercase;color:#5b6b82;margin-bottom:6px;}',
@@ -932,16 +933,95 @@ function renderGuidedPracticeTemplate_(lesson, teacherView, forPrint) {
     renderObjectiveSection_(lesson),
     renderSuccessCriteriaSection_(lesson),
     renderVocabularySection_(lesson, true),
-    renderSummarySection_(lesson, 'Lesson Focus'),
-    renderGuidedPracticeConceptSection_(lesson),
+    renderGuidedPracticeFocusSection_(lesson),
+    renderGuidedPracticeLearnSection_(lesson),
+    renderGuidedPracticeModelSection_(lesson),
     renderPracticeSection_(lesson, teacherView, forPrint, {
-      title: 'Now Try On Your Own',
+      title: 'MASTER',
       note: teacherView
-        ? 'Teacher copy shows accepted answers and hints after the guided examples.'
-        : 'Work through the guided learning, then complete the items independently.'
+        ? 'Teacher copy shows accepted answers and hints after the Learn and Practice stages.'
+        : 'Move through Learn and Practice first, then complete the Master tasks independently.'
     }),
     renderTeacherNotesSection_(lesson, teacherView)
   ].join('');
+}
+
+function renderGuidedPracticeFocusSection_(lesson) {
+  return `
+    <section>
+      <h2 class="section-title">LEARN → PRACTICE → MASTER</h2>
+      <div class="guided-focus-strip">
+        <div class="guided-focus-title">Guided Learning Path</div>
+        <div class="editable summary-text" data-field="lessonSummary">${escapeHtml_(lesson.lessonSummary)}</div>
+      </div>
+    </section>
+  `;
+}
+
+function renderGuidedPracticeLearnSection_(lesson) {
+  const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
+    return `
+      <article class="card guided-learn-card" data-concept-index="${index}">
+        <h3 class="concept-title editable" data-concept-field="heading">${escapeHtml_(item.heading)}</h3>
+
+        <div class="guided-summary-box">
+          <div class="concept-summary editable" data-concept-field="summary">${escapeHtml_(item.summary)}</div>
+        </div>
+
+        ${item.formula ? `
+          <div class="mini-formula-box">
+            <div class="mini-label">Useful Formula / Rule</div>
+            <div class="formula-value formula-text" data-concept-field="formula">${escapeHtml_(item.formula)}</div>
+          </div>
+        ` : ''}
+
+        <div class="guided-symbol-box">
+          <div class="sub-card-label">Key Terms and Symbols</div>
+          <div class="editable compact-note" data-concept-field="symbolMeaning">${escapeHtml_(item.symbolMeaning)}</div>
+        </div>
+
+        ${item.misconception ? `
+          <div class="misconception-box">
+            <strong>Watch Out:</strong>
+            <div class="editable" data-concept-field="misconception">${escapeHtml_(item.misconception)}</div>
+          </div>
+        ` : ''}
+      </article>
+    `;
+  }).join('');
+
+  return `
+    <section>
+      <h2 class="section-title">LEARN</h2>
+      <div class="section-note">Study the key ideas, formula or rule, important terms, and the common error to avoid.</div>
+      <div class="guided-stage-grid">
+        ${conceptsHtml}
+      </div>
+    </section>
+  `;
+}
+
+function renderGuidedPracticeModelSection_(lesson) {
+  const modelsHtml = lesson.keyConcepts.map(function (item, index) {
+    return `
+      <article class="guided-example-card" data-guided-model-index="${index}">
+        <div class="guided-example-title">MODELED EXAMPLE</div>
+        <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
+        <div class="guided-transition-note">Follow the model carefully, then use the same process in the MASTER tasks.</div>
+        <div class="example-box">
+          <div>${escapeHtml_(item.workedExample)}</div>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  return `
+    <section>
+      <h2 class="section-title">PRACTICE</h2>
+      <div class="section-note">Use these guided examples to practice the process step by step before working independently.</div>
+      ${modelsHtml}
+    </section>
+  `;
 }
 
 function renderReviewTemplate_(lesson, teacherView, forPrint) {
