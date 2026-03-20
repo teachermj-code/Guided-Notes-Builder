@@ -40,45 +40,56 @@
       padding: 0 20px;
     }
 
-    .hero {
-      background: linear-gradient(135deg, #0b57d0 0%, #0f2747 62%, #081a33 100%);
-      color: #fff;
-      border-radius: 22px;
-      padding: 20px 22px;
-      box-shadow: 0 10px 26px rgba(15, 39, 71, 0.14);
-    }
+.hero {
+  background: linear-gradient(180deg, #EAF8FF 0%, #D9F0FB 100%);
+  color: #12324A;
+  border: 1px solid #C7E3F0;
+  border-radius: 22px;
+  padding: 28px 28px;
+  box-shadow: 0 8px 20px rgba(18, 50, 74, 0.08);
+}
 
-    .hero-main {
-      max-width: 860px;
-    }
+.hero-main {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
 
-    .hero h1 {
-      margin: 0;
-      font-size: 28px;
-      line-height: 1.1;
-      letter-spacing: -0.01em;
-    }
+.hero-centered {
+  text-align: center;
+}
 
-    .hero p {
-      margin: 10px 0 0;
-      font-size: 14px;
-      line-height: 1.6;
-      color: rgba(255, 255, 255, 0.92);
-    }
+.hero h1 {
+  margin: 0;
+  font-size: clamp(36px, 4.6vw, 52px);
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  font-weight: 800;
+  color: #12324A;
+}
 
-    @media (max-width: 760px) {
-      .hero {
-        padding: 18px;
-      }
+.hero p {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #4F6B80;
+  letter-spacing: 0.015em;
+}
 
-      .hero h1 {
-        font-size: 24px;
-      }
+@media (max-width: 760px) {
+  .hero {
+    padding: 20px 18px;
+  }
 
-      .hero p {
-        font-size: 13px;
-      }
-    }
+  .hero h1 {
+    font-size: 30px;
+    letter-spacing: 0.025em;
+  }
+
+  .hero p {
+    font-size: 12px;
+  }
+}
 
     .grid {
       display: grid;
@@ -524,14 +535,11 @@
 <body>
   <div class="shell">
     <div class="hero">
-      <div class="hero-main">
-        <h1>Lesson Guide Builder by Teacher MJ</h1>
-        <p>
-          Generate a structured lesson guide with key concepts, guided explanations, and individual practice items.
-          The preview is interactive, and the PDF export flows cleanly across multiple pages.
-        </p>
-      </div>
-    </div>
+  <div class="hero-main hero-centered">
+    <h1>LESSON GUIDE BUILDER</h1>
+    <p>Developed by Teacher MJ © <?!= getCurrentYear_() ?></p>
+  </div>
+</div>
 
     <div class="grid">
       <div class="panel">

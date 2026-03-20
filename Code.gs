@@ -19,6 +19,9 @@ function doGet() {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
+function getCurrentYear_() {
+  return new Date().getFullYear();
+}
 /***************************************
  * 2. PUBLIC ACTIONS
  ***************************************/
