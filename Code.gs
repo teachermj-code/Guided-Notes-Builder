@@ -1,3 +1,4 @@
+
 /***************************************
  * LESSON GUIDE BUILDER BY TEACHER MJ
  * Server-side Apps Script
@@ -1231,7 +1232,7 @@ function renderLessonHtml_(lesson, options) {
   const headerInfo = opts.headerInfo || {};
   const templateType = normalizeEnum_(lesson.templateType, TEMPLATE_TYPES, DEFAULT_TEMPLATE);
 
-  const topHeaderHtml = renderTopHeaderHtml_(lesson, teacherView, headerInfo);
+  const topHeaderHtml = renderTopHeaderHtml_(lesson, teacherView, headerInfo, forPrint);
   const lessonSheetClass = 'lesson-sheet layout-' + layoutMode.toLowerCase();
   const bodyHtml = renderTemplateBody_(lesson, {
     teacherView: teacherView,
@@ -1248,7 +1249,58 @@ function renderLessonHtml_(lesson, options) {
   );
 }
 
-function renderTopHeaderHtml_(lesson, teacherView, headerInfo) {
+function renderTopHeaderHtml_(lesson, teacherView, headerInfo, forPrint) {
+  if (forPrint) {
+    return `
+      <header class="lesson-header print-lesson-header">
+        <div class="doc-banner">
+          ${headerInfo.schoolName ? `<div class="school-name">${escapeHtml_(headerInfo.schoolName)}</div>` : ''}
+          ${headerInfo.customHeader ? `<div class="custom-header">${escapeHtml_(headerInfo.customHeader)}</div>` : ''}
+        </div>
+
+        <div class="eyebrow">${teacherView ? 'Teacher Copy' : 'Student Copy'}</div>
+        <h1 class="lesson-title">${escapeHtml_(lesson.title)}</h1>
+
+        <table class="lesson-meta-table" role="presentation">
+          <tr>
+            <td>
+              <div class="meta-label">Subject</div>
+              <div class="meta-value">${escapeHtml_(lesson.subject)}</div>
+            </td>
+            <td>
+              <div class="meta-label">Grade Level</div>
+              <div class="meta-value">${escapeHtml_(lesson.gradeLevel)}</div>
+            </td>
+            <td>
+              <div class="meta-label">Topic</div>
+              <div class="meta-value">${escapeHtml_(lesson.topic)}</div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div class="meta-label">Template</div>
+              <div class="meta-value">${escapeHtml_(prettyEnum_(lesson.templateType))}</div>
+            </td>
+            <td>
+              <div class="meta-label">Difficulty</div>
+              <div class="meta-value">${escapeHtml_(prettyEnum_(lesson.difficulty))}</div>
+            </td>
+            <td>
+              <div class="meta-label">Quarter</div>
+              <div class="meta-value">${escapeHtml_(headerInfo.quarter || '')}</div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="3">
+              <div class="meta-label">Teacher Name</div>
+              <div class="meta-value">${escapeHtml_(headerInfo.teacherName || '')}</div>
+            </td>
+          </tr>
+        </table>
+      </header>
+    `;
+  }
+
   return `
     <header class="lesson-header">
       <div class="doc-banner">
@@ -1298,7 +1350,7 @@ function renderConceptTemplate_(lesson, teacherView, forPrint) {
     renderSuccessCriteriaSection_(lesson),
     renderVocabularySection_(lesson, false),
     renderSummarySection_(lesson, 'Lesson Overview'),
-    renderFullConceptSection_(lesson),
+    renderFullConceptSection_(lesson, forPrint),
     renderPracticeSection_(lesson, teacherView, forPrint, {
       title: 'Individual Practice',
       note: teacherView
@@ -1315,7 +1367,7 @@ function renderGuidedPracticeTemplate_(lesson, teacherView, forPrint) {
     renderSuccessCriteriaSection_(lesson),
     renderVocabularySection_(lesson, true),
     renderGuidedPracticeFocusSection_(lesson),
-    renderGuidedPracticeLearnSection_(lesson),
+    renderGuidedPracticeLearnSection_(lesson, forPrint),
     renderGuidedPracticeModelSection_(lesson),
     renderPracticeSection_(lesson, teacherView, forPrint, {
       title: 'MASTER',
@@ -1333,7 +1385,7 @@ function renderReviewTemplate_(lesson, teacherView, forPrint) {
     renderSuccessCriteriaSection_(lesson),
     renderVocabularySection_(lesson, true),
     renderReviewFocusSection_(lesson),
-    renderReviewConceptSection_(lesson),
+    renderReviewConceptSection_(lesson, forPrint),
     renderPracticeSection_(lesson, teacherView, forPrint, {
       title: 'MIXED REVIEW',
       note: teacherView
@@ -1367,7 +1419,7 @@ function renderRemediationTemplate_(lesson, teacherView, forPrint) {
     renderSuccessCriteriaSection_(lesson),
     renderVocabularySection_(lesson, true),
     renderRemediationFocusSection_(lesson),
-    renderRemediationConceptSection_(lesson),
+    renderRemediationConceptSection_(lesson, forPrint),
     renderRemediationModelSection_(lesson),
     renderPracticeGroupSection_(lesson, teacherView, forPrint, {
       title: 'TRY WITH HELP',
@@ -1395,7 +1447,7 @@ function renderEnrichmentTemplate_(lesson, teacherView, forPrint) {
     renderSuccessCriteriaSection_(lesson),
     renderVocabularySection_(lesson, true),
     renderEnrichmentRecallSection_(lesson),
-    renderEnrichmentConceptSection_(lesson),
+    renderEnrichmentConceptSection_(lesson, forPrint),
     renderPracticeGroupSection_(lesson, teacherView, forPrint, {
       title: 'CHALLENGE',
       note: teacherView
@@ -1489,9 +1541,7 @@ function renderVocabularySection_(lesson, compact) {
 }
 
 function renderSummarySection_(lesson, title) {
-  if (!lesson.lessonSummary) {
-    return '';
-  }
+  if (!lesson.lessonSummary) return '';
 
   return `
     <section>
@@ -1503,7 +1553,52 @@ function renderSummarySection_(lesson, title) {
   `;
 }
 
-function renderFullConceptSection_(lesson) {
+function renderFullConceptSection_(lesson, forPrint) {
+  if (forPrint) {
+    const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
+      return `
+        <article class="card print-concept-flow" data-concept-index="${index}">
+          <div class="print-concept-header">
+            <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
+            <div class="concept-summary">${escapeHtml_(item.summary)}</div>
+          </div>
+
+          ${item.formula ? `
+            <div class="formula-box">
+              <div class="formula-label">Formula</div>
+              <div class="formula-value formula-text">${escapeHtml_(item.formula)}</div>
+            </div>
+          ` : ''}
+
+          <div class="sub-card">
+            <div class="sub-card-label">Meaning of Symbols / Important Terms</div>
+            <div>${escapeHtml_(item.symbolMeaning)}</div>
+          </div>
+
+          <div class="example-box">
+            <strong>Worked Example:</strong>
+            <div>${escapeHtml_(item.workedExample)}</div>
+          </div>
+
+          ${item.misconception ? `
+            <div class="misconception-box">
+              <strong>Common Misconception:</strong>
+              <div>${escapeHtml_(item.misconception)}</div>
+            </div>
+          ` : ''}
+        </article>
+      `;
+    }).join('');
+
+    return `
+      <section>
+        <h2 class="section-title">Key Concepts</h2>
+        <div class="section-note">Use these explanations and examples for direct instruction.</div>
+        ${conceptsHtml}
+      </section>
+    `;
+  }
+
   const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
       <article class="card concept-card" data-concept-index="${index}">
@@ -1554,7 +1649,48 @@ function renderGuidedPracticeFocusSection_(lesson) {
   `;
 }
 
-function renderGuidedPracticeLearnSection_(lesson) {
+function renderGuidedPracticeLearnSection_(lesson, forPrint) {
+  if (forPrint) {
+    const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
+      return `
+        <article class="card print-concept-flow guided-learn-card" data-concept-index="${index}">
+          <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
+
+          <div class="guided-summary-box">
+            <div class="concept-summary">${escapeHtml_(item.summary)}</div>
+          </div>
+
+          ${item.formula ? `
+            <div class="mini-formula-box">
+              <div class="mini-label">Useful Formula / Rule</div>
+              <div class="formula-value formula-text">${escapeHtml_(item.formula)}</div>
+            </div>
+          ` : ''}
+
+          <div class="guided-symbol-box">
+            <div class="sub-card-label">Key Terms and Symbols</div>
+            <div class="compact-note">${escapeHtml_(item.symbolMeaning)}</div>
+          </div>
+
+          ${item.misconception ? `
+            <div class="misconception-box">
+              <strong>Watch Out:</strong>
+              <div>${escapeHtml_(item.misconception)}</div>
+            </div>
+          ` : ''}
+        </article>
+      `;
+    }).join('');
+
+    return `
+      <section>
+        <h2 class="section-title">LEARN</h2>
+        <div class="section-note">Study the key ideas, formula or rule, important terms, and the common error to avoid.</div>
+        ${conceptsHtml}
+      </section>
+    `;
+  }
+
   const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
       <article class="card guided-learn-card" data-concept-index="${index}">
@@ -1632,7 +1768,47 @@ function renderReviewFocusSection_(lesson) {
   `;
 }
 
-function renderReviewConceptSection_(lesson) {
+function renderReviewConceptSection_(lesson, forPrint) {
+  if (forPrint) {
+    const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
+      return `
+        <article class="card print-concept-flow review-mini-card quick-review-card" data-concept-index="${index}">
+          <div class="review-mini-title">QUICK REMINDER</div>
+          <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
+
+          <div class="concept-summary">${escapeHtml_(item.summary)}</div>
+
+          ${item.formula ? `
+            <div class="review-rule-box">
+              <div class="mini-label">Formula / Rule</div>
+              <div class="formula-value formula-text">${escapeHtml_(item.formula)}</div>
+            </div>
+          ` : ''}
+
+          <div class="review-reminder-box">
+            <div class="sub-card-label">Remember This</div>
+            <div class="compact-note">${escapeHtml_(item.symbolMeaning)}</div>
+          </div>
+
+          ${item.misconception ? `
+            <div class="misconception-box">
+              <strong>Common Error:</strong>
+              <div>${escapeHtml_(item.misconception)}</div>
+            </div>
+          ` : ''}
+        </article>
+      `;
+    }).join('');
+
+    return `
+      <section>
+        <h2 class="section-title">QUICK REMINDERS</h2>
+        <div class="section-note">Scan these reminders first, then answer the review items.</div>
+        ${conceptsHtml}
+      </section>
+    `;
+  }
+
   const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
       <article class="review-mini-card quick-review-card" data-concept-index="${index}">
@@ -1755,7 +1931,47 @@ function renderRemediationFocusSection_(lesson) {
   `;
 }
 
-function renderRemediationConceptSection_(lesson) {
+function renderRemediationConceptSection_(lesson, forPrint) {
+  if (forPrint) {
+    const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
+      return `
+        <article class="card print-concept-flow remediation-card" data-concept-index="${index}">
+          <div class="remediation-model-title">UNDERSTAND</div>
+          <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
+
+          <div class="concept-summary">${escapeHtml_(item.summary)}</div>
+
+          ${item.formula ? `
+            <div class="mini-formula-box">
+              <div class="mini-label">Rule / Formula</div>
+              <div class="formula-value formula-text">${escapeHtml_(item.formula)}</div>
+            </div>
+          ` : ''}
+
+          <div class="remediation-help-box">
+            <div class="sub-card-label">Helpful Terms and Symbols</div>
+            <div class="compact-note">${escapeHtml_(item.symbolMeaning)}</div>
+          </div>
+
+          ${item.misconception ? `
+            <div class="misconception-box">
+              <strong>Watch Out:</strong>
+              <div>${escapeHtml_(item.misconception)}</div>
+            </div>
+          ` : ''}
+        </article>
+      `;
+    }).join('');
+
+    return `
+      <section>
+        <h2 class="section-title">UNDERSTAND</h2>
+        <div class="section-note">Study the idea first. Focus on the rule, the key terms, and the common mistake to avoid.</div>
+        ${conceptsHtml}
+      </section>
+    `;
+  }
+
   const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
       <article class="remediation-card" data-concept-index="${index}">
@@ -1832,7 +2048,47 @@ function renderEnrichmentRecallSection_(lesson) {
   `;
 }
 
-function renderEnrichmentConceptSection_(lesson) {
+function renderEnrichmentConceptSection_(lesson, forPrint) {
+  if (forPrint) {
+    const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
+      return `
+        <article class="card print-concept-flow enrichment-card" data-concept-index="${index}">
+          <div class="enrichment-card-title">THINK DEEPER</div>
+          <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
+
+          <div class="concept-summary">${escapeHtml_(item.summary)}</div>
+
+          ${item.formula ? `
+            <div class="review-rule-box">
+              <div class="mini-label">Key Rule / Relationship</div>
+              <div class="formula-value formula-text">${escapeHtml_(item.formula)}</div>
+            </div>
+          ` : ''}
+
+          <div class="enrichment-note-box">
+            <div class="sub-card-label">Big Idea to Keep in Mind</div>
+            <div class="compact-note">${escapeHtml_(item.symbolMeaning)}</div>
+          </div>
+
+          ${item.misconception ? `
+            <div class="misconception-box">
+              <strong>Avoid This Shortcut Error:</strong>
+              <div>${escapeHtml_(item.misconception)}</div>
+            </div>
+          ` : ''}
+        </article>
+      `;
+    }).join('');
+
+    return `
+      <section>
+        <h2 class="section-title">THINK DEEPER</h2>
+        <div class="section-note">Review the big ideas first, then use them in more demanding and less familiar tasks.</div>
+        ${conceptsHtml}
+      </section>
+    `;
+  }
+
   const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
       <article class="enrichment-card" data-concept-index="${index}">
@@ -2058,7 +2314,7 @@ function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
  ***************************************/
 function buildPrintableDocument_(bodyHtml, options) {
   const opts = options || {};
-  const footerText = String(opts.footerText || APP_TITLE);
+  const footerText = opts.footerText || APP_TITLE;
   const documentTitle = opts.documentTitle || APP_TITLE;
 
   return `
@@ -2067,515 +2323,48 @@ function buildPrintableDocument_(bodyHtml, options) {
       <head>
         <meta charset="utf-8">
         <title>${escapeHtml_(documentTitle)}</title>
+
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
         <style>
           ${getSharedStyles_()}
-          ${getPrintStyles_()}
+          ${getPrintStyles_(footerText)}
         </style>
       </head>
       <body class="print-mode">
-        ${bodyHtml}
+        <div class="print-doc">
+          ${bodyHtml}
+        </div>
+
         <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
         <script>
-          (function () {
-            const PRINT_LAYOUT = Object.freeze({
-              safeContentHeightIn: 9.35,
-              continuationSuffix: ' (continued)',
-              footerText: ${JSON.stringify(footerText)}
+          function renderMathForPrint() {
+            if (typeof renderMathInElement !== 'function') {
+              window.setTimeout(renderMathForPrint, 150);
+              return;
+            }
+
+            renderMathInElement(document.body, {
+              delimiters: [
+                { left: '\\\\[', right: '\\\\]', display: true },
+                { left: '\\\\(', right: '\\\\)', display: false }
+              ],
+              throwOnError: false
             });
 
-            function measureInches(inches) {
-              const probe = document.createElement('div');
-              probe.style.position = 'absolute';
-              probe.style.left = '-99999px';
-              probe.style.top = '0';
-              probe.style.width = '1px';
-              probe.style.height = inches + 'in';
-              probe.style.visibility = 'hidden';
-              document.body.appendChild(probe);
-              const px = probe.getBoundingClientRect().height;
-              probe.remove();
-              return px;
-            }
-
-            function createMeasureRoot() {
-              const root = document.createElement('div');
-              root.id = 'printMeasureRoot';
-              document.body.appendChild(root);
-              return root;
-            }
-
-            function createPageShell() {
-              const page = document.createElement('div');
-              page.className = 'print-page';
-
-              const content = document.createElement('div');
-              content.className = 'print-page-content';
-
-              const footer = document.createElement('div');
-              footer.className = 'print-page-footer';
-
-              page.appendChild(content);
-              page.appendChild(footer);
-
-              return page;
-            }
-
-            function getDirectChildren(node) {
-              return Array.prototype.slice.call(node.children || []);
-            }
-
-            function getDirectSectionTitle(section) {
-              return getDirectChildren(section).find(function (child) {
-                return child.classList && child.classList.contains('section-title');
-              }) || null;
-            }
-
-            function addContinuationLabel(sectionClone) {
-              const title = getDirectSectionTitle(sectionClone);
-              if (!title) return;
-
-              if (title.textContent.indexOf(PRINT_LAYOUT.continuationSuffix) === -1) {
-                title.textContent += PRINT_LAYOUT.continuationSuffix;
-              }
-            }
-
-            function simplifyContinuationShell(sectionClone) {
-              const directChildren = getDirectChildren(sectionClone);
-
-              directChildren.forEach(function (child) {
-                const keep =
-                  (child.classList && child.classList.contains('section-title')) ||
-                  child.tagName.toLowerCase() === 'article' ||
-                  (child.classList && (
-                    child.classList.contains('card') ||
-                    child.classList.contains('guided-stage-grid') ||
-                    child.classList.contains('review-list') ||
-                    child.classList.contains('remediation-grid') ||
-                    child.classList.contains('enrichment-grid') ||
-                    child.classList.contains('answer-key-list')
-                  ));
-
-                if (!keep) {
-                  child.remove();
-                }
-              });
-
-              addContinuationLabel(sectionClone);
-            }
-
-            function measureFragment(fragment, measureRoot) {
-              measureRoot.innerHTML = '';
-
-              const page = createPageShell();
-              page.querySelector('.print-page-content').appendChild(fragment.cloneNode(true));
-              measureRoot.appendChild(page);
-
-              return page.querySelector('.print-page-content').getBoundingClientRect().height;
-            }
-
-            function pageWouldFit(page, fragment, maxHeight, measureRoot) {
-              measureRoot.innerHTML = '';
-
-              const testPage = page.cloneNode(true);
-              testPage.querySelector('.print-page-content').appendChild(fragment.cloneNode(true));
-              measureRoot.appendChild(testPage);
-
-              const height = testPage.querySelector('.print-page-content').getBoundingClientRect().height;
-              return height <= maxHeight;
-            }
-
-            function getSectionStrategy(section) {
-              const directChildren = getDirectChildren(section);
-
-              const directArticles = directChildren.filter(function (child) {
-                return child.tagName.toLowerCase() === 'article';
-              });
-              if (directArticles.length) {
-                return { mode: 'direct-articles' };
-              }
-
-              const directContainerSelectors = [
-                '.guided-stage-grid',
-                '.review-list',
-                '.remediation-grid',
-                '.enrichment-grid',
-                '.answer-key-list'
-              ];
-
-              for (let i = 0; i < directContainerSelectors.length; i++) {
-                const selector = directContainerSelectors[i];
-                const container = directChildren.find(function (child) {
-                  return child.matches && child.matches(selector);
-                });
-
-                if (container && container.children && container.children.length) {
-                  return {
-                    mode: 'direct-container',
-                    selector: selector
-                  };
-                }
-              }
-
-              const directCard = directChildren.find(function (child) {
-                return child.classList && child.classList.contains('card');
-              });
-
-              if (directCard) {
-                const nestedSelectors = [
-                  '.criteria-list',
-                  '.teacher-note-list',
-                  '.compact-vocab-list',
-                  '.vocab-grid'
-                ];
-
-                for (let i = 0; i < nestedSelectors.length; i++) {
-                  const selector = nestedSelectors[i];
-                  const container = directCard.querySelector(selector);
-
-                  if (container && container.children && container.children.length) {
-                    return {
-                      mode: 'nested-card-container',
-                      selector: selector
-                    };
-                  }
-                }
-              }
-
-              return null;
-            }
-
-            function getStrategyItems(section, strategy) {
-              if (!strategy) return [];
-
-              if (strategy.mode === 'direct-articles') {
-                return getDirectChildren(section).filter(function (child) {
-                  return child.tagName.toLowerCase() === 'article';
-                });
-              }
-
-              if (strategy.mode === 'direct-container') {
-                const container = getDirectChildren(section).find(function (child) {
-                  return child.matches && child.matches(strategy.selector);
-                });
-                return container ? getDirectChildren(container) : [];
-              }
-
-              if (strategy.mode === 'nested-card-container') {
-                const card = getDirectChildren(section).find(function (child) {
-                  return child.classList && child.classList.contains('card');
-                });
-                if (!card) return [];
-
-                const container = card.querySelector(strategy.selector);
-                return container ? getDirectChildren(container) : [];
-              }
-
-              return [];
-            }
-
-            function createSectionShell(section, strategy, continuation) {
-              const clone = section.cloneNode(true);
-
-              if (strategy.mode === 'direct-articles') {
-                getDirectChildren(clone).forEach(function (child) {
-                  if (child.tagName.toLowerCase() === 'article') {
-                    child.remove();
-                  }
-                });
-
-                if (continuation) {
-                  simplifyContinuationShell(clone);
-                }
-
-                return clone;
-              }
-
-              if (strategy.mode === 'direct-container') {
-                const container = getDirectChildren(clone).find(function (child) {
-                  return child.matches && child.matches(strategy.selector);
-                });
-
-                if (container) {
-                  container.innerHTML = '';
-                }
-
-                if (continuation) {
-                  simplifyContinuationShell(clone);
-                }
-
-                return clone;
-              }
-
-              if (strategy.mode === 'nested-card-container') {
-                const card = getDirectChildren(clone).find(function (child) {
-                  return child.classList && child.classList.contains('card');
-                });
-
-                if (card) {
-                  const container = card.querySelector(strategy.selector);
-                  if (container) {
-                    container.innerHTML = '';
-                  }
-                }
-
-                if (continuation) {
-                  simplifyContinuationShell(clone);
-                }
-
-                return clone;
-              }
-
-              return clone;
-            }
-
-            function appendItemToShell(shell, strategy, itemNode) {
-              if (strategy.mode === 'direct-articles') {
-                shell.appendChild(itemNode);
-                return;
-              }
-
-              if (strategy.mode === 'direct-container') {
-                const container = getDirectChildren(shell).find(function (child) {
-                  return child.matches && child.matches(strategy.selector);
-                });
-                if (container) {
-                  container.appendChild(itemNode);
-                }
-                return;
-              }
-
-              if (strategy.mode === 'nested-card-container') {
-                const card = getDirectChildren(shell).find(function (child) {
-                  return child.classList && child.classList.contains('card');
-                });
-                if (!card) return;
-
-                const container = card.querySelector(strategy.selector);
-                if (container) {
-                  container.appendChild(itemNode);
-                }
-              }
-            }
-
-            function getShellItemCount(shell, strategy) {
-              if (strategy.mode === 'direct-articles') {
-                return getDirectChildren(shell).filter(function (child) {
-                  return child.tagName.toLowerCase() === 'article';
-                }).length;
-              }
-
-              if (strategy.mode === 'direct-container') {
-                const container = getDirectChildren(shell).find(function (child) {
-                  return child.matches && child.matches(strategy.selector);
-                });
-                return container ? container.children.length : 0;
-              }
-
-              if (strategy.mode === 'nested-card-container') {
-                const card = getDirectChildren(shell).find(function (child) {
-                  return child.classList && child.classList.contains('card');
-                });
-                if (!card) return 0;
-
-                const container = card.querySelector(strategy.selector);
-                return container ? container.children.length : 0;
-              }
-
-              return 0;
-            }
-
-            function removeLastItemFromShell(shell, strategy) {
-              if (strategy.mode === 'direct-articles') {
-                const articles = getDirectChildren(shell).filter(function (child) {
-                  return child.tagName.toLowerCase() === 'article';
-                });
-                if (articles.length) {
-                  articles[articles.length - 1].remove();
-                }
-                return;
-              }
-
-              if (strategy.mode === 'direct-container') {
-                const container = getDirectChildren(shell).find(function (child) {
-                  return child.matches && child.matches(strategy.selector);
-                });
-                if (container && container.lastElementChild) {
-                  container.lastElementChild.remove();
-                }
-                return;
-              }
-
-              if (strategy.mode === 'nested-card-container') {
-                const card = getDirectChildren(shell).find(function (child) {
-                  return child.classList && child.classList.contains('card');
-                });
-                if (!card) return;
-
-                const container = card.querySelector(strategy.selector);
-                if (container && container.lastElementChild) {
-                  container.lastElementChild.remove();
-                }
-              }
-            }
-
-            function splitSectionIntoFragments(section, maxHeight, measureRoot) {
-              const fullClone = section.cloneNode(true);
-
-              if (measureFragment(fullClone, measureRoot) <= maxHeight) {
-                return [fullClone];
-              }
-
-              const strategy = getSectionStrategy(section);
-              if (!strategy) {
-                return [fullClone];
-              }
-
-              const items = getStrategyItems(section, strategy).map(function (item) {
-                return item.cloneNode(true);
-              });
-
-              if (!items.length) {
-                return [fullClone];
-              }
-
-              const fragments = [];
-              let shell = createSectionShell(section, strategy, false);
-
-              items.forEach(function (item) {
-                appendItemToShell(shell, strategy, item.cloneNode(true));
-
-                if (measureFragment(shell, measureRoot) <= maxHeight) {
-                  return;
-                }
-
-                removeLastItemFromShell(shell, strategy);
-
-                if (getShellItemCount(shell, strategy) > 0) {
-                  fragments.push(shell);
-                  shell = createSectionShell(section, strategy, true);
-                  appendItemToShell(shell, strategy, item.cloneNode(true));
-
-                  if (measureFragment(shell, measureRoot) > maxHeight) {
-                    fragments.push(shell);
-                    shell = createSectionShell(section, strategy, true);
-                  }
-                } else {
-                  appendItemToShell(shell, strategy, item.cloneNode(true));
-                  fragments.push(shell);
-                  shell = createSectionShell(section, strategy, true);
-                }
-              });
-
-              if (getShellItemCount(shell, strategy) > 0 || !fragments.length) {
-                fragments.push(shell);
-              }
-
-              return fragments;
-            }
-
-            function buildPagesFromFragments(fragments, maxHeight, measureRoot) {
-              const pages = [];
-              let currentPage = createPageShell();
-              let currentContent = currentPage.querySelector('.print-page-content');
-
-              fragments.forEach(function (fragment) {
-                if (!currentContent.children.length) {
-                  currentContent.appendChild(fragment.cloneNode(true));
-                  return;
-                }
-
-                if (pageWouldFit(currentPage, fragment, maxHeight, measureRoot)) {
-                  currentContent.appendChild(fragment.cloneNode(true));
-                } else {
-                  pages.push(currentPage);
-                  currentPage = createPageShell();
-                  currentContent = currentPage.querySelector('.print-page-content');
-                  currentContent.appendChild(fragment.cloneNode(true));
-                }
-              });
-
-              if (currentContent.children.length) {
-                pages.push(currentPage);
-              }
-
-              pages.forEach(function (page, index) {
-                const footer = page.querySelector('.print-page-footer');
-                footer.textContent =
-                  PRINT_LAYOUT.footerText + ' • Page ' + (index + 1) + ' of ' + pages.length;
-              });
-
-              return pages;
-            }
-
-            function paginateLessonForPrint() {
-              if (document.querySelector('.print-pages')) return;
-
-              const lesson = document.querySelector('.lesson-sheet');
-              if (!lesson) return;
-
-              const measureRoot = createMeasureRoot();
-              const maxHeight = measureInches(PRINT_LAYOUT.safeContentHeightIn);
-              const fragments = [];
-
-              getDirectChildren(lesson).forEach(function (child) {
-                const tag = child.tagName.toLowerCase();
-
-                if (tag === 'section') {
-                  splitSectionIntoFragments(child, maxHeight, measureRoot).forEach(function (fragment) {
-                    fragments.push(fragment);
-                  });
-                } else {
-                  fragments.push(child.cloneNode(true));
-                }
-              });
-
-              const pages = buildPagesFromFragments(fragments, maxHeight, measureRoot);
-              const pagesRoot = document.createElement('div');
-              pagesRoot.className = 'print-pages';
-
-              pages.forEach(function (page) {
-                pagesRoot.appendChild(page);
-              });
-
-              lesson.replaceWith(pagesRoot);
-              measureRoot.remove();
-            }
-
-            function renderMathThenPaginateAndPrint() {
-              if (typeof renderMathInElement !== 'function') {
-                window.setTimeout(renderMathThenPaginateAndPrint, 150);
-                return;
-              }
-
-              renderMathInElement(document.body, {
-                delimiters: [
-                  { left: '\\\\[', right: '\\\\]', display: true },
-                  { left: '\\\\(', right: '\\\\)', display: false }
-                ],
-                throwOnError: false
-              });
-
-              Promise.resolve(document.fonts ? document.fonts.ready : null).then(function () {
+            Promise.resolve(document.fonts ? document.fonts.ready : null).then(function () {
+              window.requestAnimationFrame(function () {
                 window.requestAnimationFrame(function () {
-                  window.requestAnimationFrame(function () {
-                    paginateLessonForPrint();
-
-                    window.requestAnimationFrame(function () {
-                      window.requestAnimationFrame(function () {
-                        window.print();
-                      });
-                    });
-                  });
+                  window.print();
                 });
               });
-            }
-
-            window.addEventListener('load', function () {
-              window.setTimeout(renderMathThenPaginateAndPrint, 180);
             });
-          })();
+          }
+
+          window.addEventListener('load', function () {
+            window.setTimeout(renderMathForPrint, 180);
+          });
         </script>
       </body>
     </html>
@@ -2596,58 +2385,303 @@ function getSharedStyles_() {
   ].join('');
 }
 
-function getPrintStyles_() {
+function getPrintStyles_(footerText) {
+  const safeFooter = escapeCssString_(footerText || APP_TITLE);
+
   return [
-    '@page{size:Letter; margin:0.55in;}',
-    'html,body{width:100%;}',
-    'body.print-mode{margin:0;padding:0;background:#fff !important;color:#000;}',
-    '.print-pages{width:100%;}',
-    '.print-page{position:relative;min-height:9.7in;padding-bottom:0.28in;break-after:page;page-break-after:always;overflow:visible;}',
-    '.print-page:last-child{break-after:auto;page-break-after:auto;}',
-    '.print-page-content{width:100%;overflow:visible;}',
-    '.print-page-footer{position:absolute;left:0;right:0;bottom:0;padding-top:8px;border-top:1px solid #ddd;text-align:center;font-size:10px;line-height:1.2;color:#666;}',
-    '#printMeasureRoot{position:absolute;left:-99999px;top:0;width:100%;visibility:hidden;pointer-events:none;overflow:hidden;}',
+    '@page {',
+    '  size: Letter portrait;',
+    '  margin: 0.75in 0.75in 1in 0.75in;',
+    '  @bottom-center {',
+    '    content: "' + safeFooter + '";',
+    '    font-size: 10px;',
+    '    color: #666;',
+    '    border-top: 1px solid #ddd;',
+    '    padding-top: 6px;',
+    '  }',
+    '}',
 
-    'body.print-mode .lesson-sheet{width:100%;max-width:none;padding:0;margin:0 auto;}',
-    'body.print-mode .lesson-header, body.print-mode .card{box-shadow:none;}',
-    'body.print-mode .lesson-header{padding:14px;margin-bottom:10px;break-inside:avoid;page-break-inside:avoid;}',
-    'body.print-mode .card{padding:12px;margin-bottom:10px;overflow:visible;}',
-    'body.print-mode .lesson-title{font-size:22px;line-height:1.18;}',
-    'body.print-mode .section-title{font-size:15px;margin:14px 0 6px;break-after:avoid;page-break-after:avoid;}',
-    'body.print-mode .concept-title{font-size:14px;line-height:1.3;margin:0 0 8px;break-after:avoid;page-break-after:avoid;}',
-    'body.print-mode section{break-inside:auto;page-break-inside:auto;}',
-    'body.print-mode article{break-inside:auto;page-break-inside:auto;}',
-    'body.print-mode .section-note{font-size:12px;line-height:1.5;margin-bottom:8px;}',
-    'body.print-mode .meta-value{font-size:12px;}',
-    'body.print-mode .concept-summary, body.print-mode .practice-question, body.print-mode .vocab-definition, body.print-mode .teacher-answer-box, body.print-mode .answer-reveal, body.print-mode .sub-card, body.print-mode .example-box, body.print-mode .misconception-box, body.print-mode .objective-text, body.print-mode .summary-text{font-size:12px;line-height:1.5;white-space:pre-line;overflow-wrap:anywhere;word-break:break-word;overflow:visible;}',
-    'body.print-mode .formula-value{font-size:13px;line-height:1.45;overflow:visible;word-break:break-word;}',
-    'body.print-mode .formula-box, body.print-mode .sub-card, body.print-mode .example-box, body.print-mode .misconception-box, body.print-mode .teacher-answer-box, body.print-mode .answer-key-item{break-inside:avoid;page-break-inside:avoid;}',
+    'html {',
+    '  -webkit-print-color-adjust: exact;',
+    '  print-color-adjust: exact;',
+    '}',
 
-    'body.print-mode .lesson-meta{display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:6px !important;}',
-    'body.print-mode .lesson-meta>div{padding:8px 10px;border-radius:10px;}',
-    'body.print-mode .meta-label{font-size:9px;line-height:1.1;margin-bottom:2px;}',
-    'body.print-mode .meta-value{font-size:11px;line-height:1.25;}',
-    'body.print-mode .vocab-grid{grid-template-columns:repeat(auto-fit,minmax(2in,1fr));gap:8px;}',
+    'body.print-mode {',
+    '  -webkit-print-color-adjust: exact;',
+    '  print-color-adjust: exact;',
+    '  background: #fff !important;',
+    '  color: #000;',
+    '  margin: 0;',
+    '  padding: 0;',
+    '}',
 
-    'body.print-mode .btn, body.print-mode .feedback, body.print-mode .answer-reveal.hidden{display:none !important;}',
-    'body.print-mode .practice-controls{display:block;}',
-    'body.print-mode .answer-input{display:block;width:100%;border:1px solid #999;min-width:0;}',
-    'body.print-mode .print-answer-space{margin-top:12px;}',
+    '.print-doc {',
+    '  width: 100%;',
+    '  max-width: none;',
+    '}',
 
-    'body.print-mode .answer-key-list{gap:8px;}',
-    'body.print-mode .answer-key-item{padding:10px 12px;border-radius:10px;}',
-    'body.print-mode .answer-key-number{font-size:10px;margin-bottom:4px;}',
-    'body.print-mode .answer-key-question{font-size:12px;line-height:1.45;margin-bottom:4px;}',
-    'body.print-mode .answer-key-response{font-size:12px;line-height:1.45;}',
-    'body.print-mode .answer-key-hint{font-size:11px;line-height:1.4;margin-top:4px;}',
-    'body.print-mode .lesson-sheet[data-copy-mode="TEACHER"] .answer-key-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}',
-    '@media print and (max-width:700px){body.print-mode .lesson-sheet[data-copy-mode="TEACHER"] .answer-key-list{grid-template-columns:1fr;}}',
+    '.pdf-footnote {',
+    '  display: none !important;',
+    '}',
 
-    'body.print-mode .katex-display{margin:0.35em 0;overflow:visible;}',
-    'body.print-mode .katex{max-width:100%;}',
-    'body.print-mode .editable.active-edit{outline:none;background:transparent;}',
-    'body.print-mode .pdf-footnote{display:none !important;}'
-  ].join('');
+    'body.print-mode .lesson-sheet {',
+    '  width: 100%;',
+    '  max-width: none;',
+    '  padding: 0;',
+    '  margin: 0 auto;',
+    '}',
+
+    'body.print-mode .lesson-meta-table {',
+    '  width: 100%;',
+    '  border-collapse: separate;',
+    '  border-spacing: 12px 10px;',
+    '  table-layout: fixed;',
+    '}',
+
+    'body.print-mode .lesson-meta-table td {',
+    '  background: var(--template-soft-bg);',
+    '  border: 1px solid var(--template-soft-border);',
+    '  border-radius: 12px;',
+    '  padding: 12px;',
+    '  vertical-align: top;',
+    '}',
+
+    'body.print-mode .quiz-meta-lines {',
+    '  display: grid !important;',
+    '  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;',
+    '  gap: 12px !important;',
+    '}',
+
+    'body.print-mode .print-concept-flow {',
+    '  background: #fff;',
+    '  border: 1px solid var(--template-soft-border);',
+    '  border-left: 5px solid var(--template-accent);',
+    '  border-radius: 16px;',
+    '  padding: 14px 16px;',
+    '  margin-bottom: 14px;',
+    '  box-shadow: none;',
+    '  break-inside: auto;',
+    '  page-break-inside: auto;',
+    '  -webkit-box-decoration-break: clone;',
+    '  box-decoration-break: clone;',
+    '}',
+
+    'body.print-mode .print-concept-flow + .print-concept-flow {',
+    '  margin-top: 0;',
+    '}',
+
+    'body.print-mode .print-concept-header {',
+    '  break-after: avoid-page;',
+    '  page-break-after: avoid;',
+    '}',
+
+    'body.print-mode .print-concept-header .concept-title {',
+    '  margin: 0 0 10px;',
+    '}',
+
+    'body.print-mode .print-concept-flow .concept-title {',
+    '  color: var(--template-accent-dark);',
+    '  margin: 0 0 10px;',
+    '}',
+
+    'body.print-mode .print-concept-flow .concept-summary {',
+    '  margin-bottom: 12px;',
+    '}',
+
+    'body.print-mode .print-concept-flow.guided-learn-card,',
+    'body.print-mode .print-concept-flow.review-mini-card,',
+    'body.print-mode .print-concept-flow.remediation-card,',
+    'body.print-mode .print-concept-flow.enrichment-card {',
+    '  break-inside: auto;',
+    '  page-break-inside: auto;',
+    '  -webkit-box-decoration-break: clone;',
+    '  box-decoration-break: clone;',
+    '}',
+
+    'body.print-mode .print-concept-flow.guided-learn-card {',
+    '  background: #fff;',
+    '  border: 1px solid var(--template-subtle-border);',
+    '  border-radius: 16px;',
+    '  padding: 14px 16px;',
+    '  margin-bottom: 14px;',
+    '}',
+
+    'body.print-mode .print-concept-flow.review-mini-card {',
+    '  background: #fff;',
+    '  border: 1px solid var(--template-subtle-border);',
+    '  border-radius: 14px;',
+    '  padding: 14px;',
+    '  margin-bottom: 14px;',
+    '}',
+
+    'body.print-mode .print-concept-flow.remediation-card,',
+    'body.print-mode .print-concept-flow.enrichment-card {',
+    '  background: #fff;',
+    '  border: 1px solid var(--template-subtle-border);',
+    '  border-radius: 14px;',
+    '  padding: 14px;',
+    '  margin-bottom: 14px;',
+    '}',
+
+    'body.print-mode .print-concept-flow.guided-learn-card .concept-title,',
+    'body.print-mode .print-concept-flow.review-mini-card .concept-title,',
+    'body.print-mode .print-concept-flow.remediation-card .concept-title,',
+    'body.print-mode .print-concept-flow.enrichment-card .concept-title {',
+    '  color: var(--template-accent-dark);',
+    '  margin: 0 0 10px;',
+    '}',
+
+    'body.print-mode .print-concept-flow.guided-learn-card .concept-summary,',
+    'body.print-mode .print-concept-flow.review-mini-card .concept-summary,',
+    'body.print-mode .print-concept-flow.remediation-card .concept-summary,',
+    'body.print-mode .print-concept-flow.enrichment-card .concept-summary {',
+    '  margin-bottom: 12px;',
+    '}',
+
+    'body.print-mode .vocab-grid,',
+    'body.print-mode .review-grid,',
+    'body.print-mode .guided-stage-grid,',
+    'body.print-mode .review-list,',
+    'body.print-mode .remediation-grid,',
+    'body.print-mode .enrichment-grid {',
+    '  display: grid;',
+    '  grid-template-columns: repeat(2, minmax(0, 1fr));',
+    '  gap: 12px;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .compact-vocab-list {',
+    '  columns: 2;',
+    '  column-gap: 24px;',
+    '}',
+
+    'body.print-mode section {',
+    '  break-inside: auto;',
+    '  page-break-inside: auto;',
+    '  margin-bottom: 12px;',
+    '}',
+
+    'body.print-mode article {',
+    '  break-inside: auto;',
+    '  page-break-inside: auto;',
+    '}',
+
+    'body.print-mode .lesson-header {',
+    '  padding: 14px;',
+    '  margin-bottom: 10px;',
+    '  break-inside: avoid-page;',
+    '  page-break-inside: avoid;',
+    '}',
+
+    'body.print-mode .section-title {',
+    '  font-size: 15px;',
+    '  margin: 14px 0 6px;',
+    '  break-after: avoid-page;',
+    '  page-break-after: avoid;',
+    '}',
+
+    'body.print-mode .section-note {',
+    '  font-size: 12px;',
+    '  line-height: 1.5;',
+    '  margin-bottom: 8px;',
+    '}',
+
+    'body.print-mode .card {',
+    '  padding: 12px;',
+    '  margin-bottom: 10px;',
+    '  box-shadow: none;',
+    '  overflow: visible;',
+    '  break-inside: auto;',
+    '  page-break-inside: auto;',
+    '}',
+
+    'body.print-mode .concept-card,',
+    'body.print-mode .guided-example-card,',
+    'body.print-mode .review-mini-card,',
+    'body.print-mode .remediation-card,',
+    'body.print-mode .remediation-model-card,',
+    'body.print-mode .enrichment-card,',
+    'body.print-mode .practice-card {',
+    '  break-inside: auto;',
+    '  page-break-inside: auto;',
+    '  -webkit-box-decoration-break: clone;',
+    '  box-decoration-break: clone;',
+    '}',
+
+    'body.print-mode .quiz-info-card,',
+    'body.print-mode .quiz-focus-card,',
+    'body.print-mode .answer-key-item,',
+    'body.print-mode .mini-formula-box,',
+    'body.print-mode .review-rule-box,',
+    'body.print-mode .teacher-answer-box,',
+    'body.print-mode .guided-summary-box,',
+    'body.print-mode .guided-symbol-box,',
+    'body.print-mode .review-reminder-box,',
+    'body.print-mode .remediation-help-box,',
+    'body.print-mode .enrichment-note-box,',
+    'body.print-mode .katex-display {',
+    '  break-inside: avoid-page;',
+    '  page-break-inside: avoid;',
+    '  overflow: visible;',
+    '}',
+
+    'body.print-mode .concept-card .formula-box,',
+    'body.print-mode .concept-card .sub-card,',
+    'body.print-mode .concept-card .example-box,',
+    'body.print-mode .concept-card .misconception-box,',
+    'body.print-mode .print-concept-flow .formula-box,',
+    'body.print-mode .print-concept-flow .sub-card,',
+    'body.print-mode .print-concept-flow .example-box,',
+    'body.print-mode .print-concept-flow .misconception-box,',
+    'body.print-mode .remediation-card .misconception-box,',
+    'body.print-mode .enrichment-card .misconception-box,',
+    'body.print-mode .review-mini-card .misconception-box {',
+    '  break-inside: auto;',
+    '  page-break-inside: auto;',
+    '  overflow: visible;',
+    '}',
+
+    'body.print-mode .concept-summary,',
+    'body.print-mode .practice-question,',
+    'body.print-mode .vocab-definition,',
+    'body.print-mode .teacher-answer-box,',
+    'body.print-mode .answer-reveal,',
+    'body.print-mode .sub-card,',
+    'body.print-mode .example-box,',
+    'body.print-mode .misconception-box,',
+    'body.print-mode .objective-text,',
+    'body.print-mode .summary-text {',
+    '  font-size: 12px;',
+    '  line-height: 1.5;',
+    '  white-space: pre-line;',
+    '  overflow-wrap: anywhere;',
+    '  word-break: break-word;',
+    '  overflow: visible;',
+    '  orphans: 3;',
+    '  widows: 3;',
+    '}',
+
+    'body.print-mode .formula-value {',
+    '  font-size: 13px;',
+    '  line-height: 1.45;',
+    '  overflow: visible;',
+    '  word-break: break-word;',
+    '}',
+
+    'body.print-mode .katex {',
+    '  max-width: 100%;',
+    '}',
+
+    'body.print-mode .btn,',
+    'body.print-mode .feedback,',
+    'body.print-mode .answer-reveal.hidden {',
+    '  display: none !important;',
+    '}',
+
+    'body.print-mode .editable.active-edit {',
+    '  outline: none;',
+    '  background: transparent;',
+    '}'
+  ].join('\n');
 }
 
 /***************************************
@@ -2660,7 +2694,6 @@ function repairLatexText_(value) {
     .replace(/\r(?=[A-Za-z])/g, '\\r')
     .replace(/\t(?=[A-Za-z])/g, '\\t');
 }
-
 
 function normalizeDisplayText_(value) {
   return String(value == null ? '' : value)
@@ -2683,6 +2716,13 @@ function escapeHtml_(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function escapeCssString_(value) {
+  return String(value == null ? '' : value)
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\r?\n/g, ' ');
 }
 
 function toBoolean_(value, defaultValue) {
