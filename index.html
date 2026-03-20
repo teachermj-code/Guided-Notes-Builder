@@ -325,24 +325,31 @@
       border-bottom: 1px solid var(--line);
     }
 
-    .toolbar-group {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
+   .toolbar-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-left: auto;
+  justify-content: flex-end;
+}
 
     .input-actions {
       justify-content: flex-start;
     }
 
     .preview-toolbar-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 14px;
-      flex-wrap: wrap;
-    }
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.preview-toolbar-top .toolbar-group {
+  margin-left: auto;
+  justify-content: flex-end;
+}
 
     .preview-toolbar-controls {
       display: flex;
