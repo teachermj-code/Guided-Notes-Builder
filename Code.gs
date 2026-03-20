@@ -343,32 +343,26 @@ function generateLessonJson_(request) {
 function buildPrompt_(request) {
   const subjectGuidance = getSubjectGuidance_(request.subject);
   const templateGuidance = getTemplateGuidance_(request.templateType);
+  const templateFieldBehavior = getTemplateFieldBehavior_(request.templateType);
+  const localContextGuidance = getLocalContextGuidance_();
 
   return [
     'You are an expert instructional content generator for classroom teachers.',
     'Create a classroom-ready lesson guide in JSON only.',
     '',
-    'Required output fields:',
-    '1. title',
-    '2. subject',
-    '3. gradeLevel',
-    '4. topic',
-    '5. templateType',
-    '6. difficulty',
-    '7. objective',
-    '8. successCriteria array',
-    '9. vocabulary array of objects with term and definition',
-    '10. lessonSummary',
-    '11. keyConcepts array',
-    '12. practiceItems array',
-    '13. teacherNotes array',
+    'Required output:',
+    '- Return valid JSON only.',
+    '- Fill all schema fields completely and meaningfully.',
+    '- Ensure every field is classroom-ready, specific, and useful.',
     '',
     'Key concept rules:',
     '- Each key concept must include: heading, summary, formula, symbolMeaning, workedExample, misconception.',
     '- For non-math topics, formula may be an empty string only if no formula is appropriate.',
     '- symbolMeaning must explain symbols or important vocabulary used in the formula or concept.',
     '- workedExample must begin with a short problem or context before the steps.',
-    '- For Mathematics, present workedExample in this order: Problem, Step 1, Step 2, Step 3, Answer.',
+    '- For Mathematics, present workedExample in this order: Problem, Step 1, Step 2, Step 3, and continue with additional steps if needed, then Answer.',
+    '- Provide a logical step-by-step sequence with at least 3 steps when the topic requires procedural solving.',
+    '- For simpler topics, keep the solution short but clearly sequenced.',
     '- Keep the Problem and Step explanations in plain readable text.',
     '- Use KaTeX only for the actual calculation line, not for every number inside the sentence.',
     '- Place each step on its own new line using the format "Step 1:", "Step 2:", and so on.',
@@ -379,11 +373,12 @@ function buildPrompt_(request) {
     '- Create EXACTLY ' + request.itemCount + ' practice items.',
     '- Each item must include: type, question, options, acceptedAnswers, hint.',
     '- Allowed types: short-answer, multiple-choice, true-false.',
-    '- Use a realistic mix of item types unless the template strongly suggests otherwise.',
     '- For short-answer, options must be an empty array.',
     '- For multiple-choice, provide exactly 4 options.',
     '- For true-false, options must be ["True","False"].',
     '- acceptedAnswers must contain at least one expected answer string.',
+    '- The practice items must match the selected template type in tone, sequence, and difficulty progression.',
+    '- Keep all questions age-appropriate, clear, and answerable.',
     '',
     'Formatting rules:',
     '- In Mathematics lessons, use display KaTeX \\[...\\] in the formula field for every formula or computation line.',
@@ -408,18 +403,25 @@ function buildPrompt_(request) {
     'Include vocabulary: ' + (request.includeVocabulary ? 'Yes' : 'No'),
     'Include misconceptions: ' + (request.includeMisconceptions ? 'Yes' : 'No'),
     '',
+    'Local classroom context:',
+    localContextGuidance,
+    '',
     'Subject-specific guidance:',
     subjectGuidance,
     '',
     'Template-specific guidance:',
     templateGuidance,
     '',
+    'Template-specific field behavior:',
+    templateFieldBehavior,
+    '',
     'Quality expectations:',
-    '- lessonSummary must be a substantial teaching overview, not a single sentence.',
+    '- lessonSummary must be genuinely useful for classroom instruction and must fit the selected template.',
     '- successCriteria must be student-friendly and measurable.',
     '- vocabulary terms must be age-appropriate.',
     '- teacherNotes must include teaching tips, pacing advice, or likely misconceptions.',
-    '- Ensure the lesson is genuinely useful for classroom instruction, not generic filler.'
+    '- Ensure the lesson is useful, specific, and classroom-ready rather than generic.',
+    '- Make the tone, section content, and practice style clearly match the selected template.'
   ].join('\n');
 }
 
@@ -481,42 +483,245 @@ function getTemplateGuidance_(templateType) {
 
   if (t === 'GUIDED_PRACTICE') {
     return [
-      '- Use direct explanation followed by scaffolded examples.',
-      '- Practice items should start easier and gradually increase in complexity.'
+      '- Purpose: create a scaffolded lesson that moves from explanation to supported example to independent practice.',
+      '- Tone: clear, supportive, teacher-guided, and step-by-step.',
+      '- lessonSummary should describe the learning path and what students will do during guided practice.',
+      '- keyConcepts should be concise, well-sequenced, and easy to act on.',
+      '- Keep sections brief and actionable, focusing on student execution.',
+      '- workedExample must be especially strong, explicit, and easy to follow.',
+      '- Practice items must progress from easier to harder.',
+      '- Early practice items should be direct and highly accessible.',
+      '- Use language that supports confidence, clarity, and gradual release.'
     ].join('\n');
   }
 
   if (t === 'REVIEW') {
     return [
-      '- Focus on concise recall, representative examples, and mixed review tasks.',
-      '- Keep the summary focused and practical.'
+      '- Purpose: create a compact review sheet for recalling and checking previously learned ideas.',
+      '- Tone: concise, efficient, and review-oriented.',
+      '- lessonSummary should be brief and focused on the main ideas students need to remember.',
+      '- keyConcept summaries should be short and written as quick reminders.',
+      '- symbolMeaning should function as a memory aid or review cue.',
+      '- workedExample should be brief and selective rather than fully instructional.',
+      '- Practice items should provide representative mixed review across the topic.',
+      '- Include both recall and straightforward application.',
+      '- Keep explanations compact so the sheet feels fast to scan and use.',
+      '- Do not turn the review into a full direct-instruction lesson.'
     ].join('\n');
   }
 
   if (t === 'QUIZ') {
     return [
-      '- Keep the lesson summary short and assessment-oriented.',
-      '- Practice items should function like quiz items with clear answerability.'
+      '- Purpose: create an assessment-style lesson guide that supports a quiz format.',
+      '- Tone: formal, neutral, direct, and assessment-oriented.',
+      '- lessonSummary should be minimal and concise because the main emphasis is assessment.',
+      '- keyConcepts may still be included for schema completeness, but keep them compact and reference-style.',
+      '- Practice items must read like actual quiz items with clear, answerable wording.',
+      '- Use direct, objective testing language such as "Solve", "Identify", "Choose", "Compare", or "Determine".',
+      '- Questions should feel independent and test-ready.',
+      '- Hints should stay short and practical.',
+      '- Use precise wording and avoid ambiguity.',
+      '- Do not include tutorial phrasing inside the quiz questions.'
     ].join('\n');
   }
 
   if (t === 'REMEDIATION') {
     return [
-      '- Break concepts into smaller steps.',
-      '- Use simpler wording and explicit scaffolds.'
+      '- Purpose: support learners who need simpler explanations, smaller steps, and more guided understanding.',
+      '- Tone: supportive, clear, patient, and highly accessible.',
+      '- Use short sentences, explicit wording, and concrete examples.',
+      '- lessonSummary should clearly explain the focus in a reassuring and easy-to-follow way.',
+      '- keyConcept summaries should be broken into manageable ideas.',
+      '- workedExample must be highly explicit and carefully sequenced.',
+      '- misconception should identify a very common student error in practical classroom language.',
+      '- Practice items must begin with very accessible tasks before moving to slightly more independent work.',
+      '- Build difficulty gradually and keep cognitive load low in the earlier items.'
     ].join('\n');
   }
 
   if (t === 'ENRICHMENT') {
     return [
-      '- Include extension-level thinking, pattern recognition, or transfer when appropriate.',
-      '- Practice items should include some higher-level application.'
+      '- Purpose: extend learning beyond standard mastery through deeper thinking, reasoning, and transfer.',
+      '- Tone: intellectually engaging, challenging, and thought-provoking.',
+      '- lessonSummary should frame the topic as an opportunity to think more deeply or apply ideas in richer ways.',
+      '- keyConcept summaries should emphasize patterns, relationships, reasoning, or transfer when appropriate.',
+      '- workedExample should model deeper thinking, not just routine procedure.',
+      '- Practice items should become more demanding as they progress.',
+      '- Ensure at least 50% of practice items require multi-step reasoning, pattern recognition, comparison, or real-world application.',
+      '- Later items should involve transfer to new or less familiar situations.',
+      '- Increase the thinking demand, not just the size of the numbers.'
     ].join('\n');
   }
 
   return [
-    '- Build for direct instruction first, then guided or independent practice.',
-    '- Ensure the lesson is classroom-ready and logically sequenced.'
+    '- Purpose: create a full concept lesson for classroom instruction.',
+    '- Tone: clear, explanatory, and classroom-ready.',
+    '- lessonSummary should provide a strong teaching overview.',
+    '- keyConcepts should support direct instruction with clear explanation and useful examples.',
+    '- workedExample should be complete, readable, and instructionally helpful.',
+    '- Practice items should move from understanding toward application.',
+    '- Balance explanation, structure, and classroom usefulness.'
+  ].join('\n');
+}
+
+function getTemplateGuidance_(templateType) {
+  const t = String(templateType || DEFAULT_TEMPLATE).toUpperCase();
+
+  if (t === 'GUIDED_PRACTICE') {
+    return [
+      '- Purpose: create a scaffolded lesson that moves from explanation to supported example to independent practice.',
+      '- Tone: clear, supportive, teacher-guided, and step-by-step.',
+      '- lessonSummary should describe the learning path and what students will do during guided practice.',
+      '- keyConcepts should be concise, well-sequenced, and easy to act on.',
+      '- Keep sections brief and actionable, focusing on student execution.',
+      '- workedExample must be especially strong, explicit, and easy to follow.',
+      '- Practice items must progress from easier to harder.',
+      '- Early practice items should be direct and highly accessible.',
+      '- Use language that supports confidence, clarity, and gradual release.'
+    ].join('\n');
+  }
+
+  if (t === 'REVIEW') {
+    return [
+      '- Purpose: create a compact review sheet for recalling and checking previously learned ideas.',
+      '- Tone: concise, efficient, and review-oriented.',
+      '- lessonSummary should be brief and focused on the main ideas students need to remember.',
+      '- keyConcept summaries should be short and written as quick reminders.',
+      '- symbolMeaning should function as a memory aid or review cue.',
+      '- workedExample should be brief and selective rather than fully instructional.',
+      '- Practice items should provide representative mixed review across the topic.',
+      '- Include both recall and straightforward application.',
+      '- Keep explanations compact so the sheet feels fast to scan and use.',
+      '- Do not turn the review into a full direct-instruction lesson.'
+    ].join('\n');
+  }
+
+  if (t === 'QUIZ') {
+    return [
+      '- Purpose: create an assessment-style lesson guide that supports a quiz format.',
+      '- Tone: formal, neutral, direct, and assessment-oriented.',
+      '- lessonSummary should be minimal and concise because the main emphasis is assessment.',
+      '- keyConcepts may still be included for schema completeness, but keep them compact and reference-style.',
+      '- Practice items must read like actual quiz items with clear, answerable wording.',
+      '- Use direct, objective testing language such as "Solve", "Identify", "Choose", "Compare", or "Determine".',
+      '- Questions should feel independent and test-ready.',
+      '- Hints should stay short and practical.',
+      '- Use precise wording and avoid ambiguity.',
+      '- Do not include tutorial phrasing inside the quiz questions.'
+    ].join('\n');
+  }
+
+  if (t === 'REMEDIATION') {
+    return [
+      '- Purpose: support learners who need simpler explanations, smaller steps, and more guided understanding.',
+      '- Tone: supportive, clear, patient, and highly accessible.',
+      '- Use short sentences, explicit wording, and concrete examples.',
+      '- lessonSummary should clearly explain the focus in a reassuring and easy-to-follow way.',
+      '- keyConcept summaries should be broken into manageable ideas.',
+      '- workedExample must be highly explicit and carefully sequenced.',
+      '- misconception should identify a very common student error in practical classroom language.',
+      '- Practice items must begin with very accessible tasks before moving to slightly more independent work.',
+      '- Build difficulty gradually and keep cognitive load low in the earlier items.'
+    ].join('\n');
+  }
+
+  if (t === 'ENRICHMENT') {
+    return [
+      '- Purpose: extend learning beyond standard mastery through deeper thinking, reasoning, and transfer.',
+      '- Tone: intellectually engaging, challenging, and thought-provoking.',
+      '- lessonSummary should frame the topic as an opportunity to think more deeply or apply ideas in richer ways.',
+      '- keyConcept summaries should emphasize patterns, relationships, reasoning, or transfer when appropriate.',
+      '- workedExample should model deeper thinking, not just routine procedure.',
+      '- Practice items should become more demanding as they progress.',
+      '- Ensure at least 50% of practice items require multi-step reasoning, pattern recognition, comparison, or real-world application.',
+      '- Later items should involve transfer to new or less familiar situations.',
+      '- Increase the thinking demand, not just the size of the numbers.'
+    ].join('\n');
+  }
+
+  return [
+    '- Purpose: create a full concept lesson for classroom instruction.',
+    '- Tone: clear, explanatory, and classroom-ready.',
+    '- lessonSummary should provide a strong teaching overview.',
+    '- keyConcepts should support direct instruction with clear explanation and useful examples.',
+    '- workedExample should be complete, readable, and instructionally helpful.',
+    '- Practice items should move from understanding toward application.',
+    '- Balance explanation, structure, and classroom usefulness.'
+  ].join('\n');
+}
+
+function getTemplateFieldBehavior_(templateType) {
+  const t = String(templateType || DEFAULT_TEMPLATE).toUpperCase();
+
+  if (t === 'GUIDED_PRACTICE') {
+    return [
+      '- lessonSummary must describe the learning flow and what students will do during the lesson.',
+      '- keyConcept summaries must be brief, clear, and sequenced for guided instruction.',
+      '- workedExample must be especially strong and highly usable for the PRACTICE stage.',
+      '- Practice items must start with accessible items and increase gradually in difficulty.',
+      '- Use a helpful mix of short-answer, multiple-choice, and true-false when appropriate.',
+      '- The first third of the practice items should feel very approachable.'
+    ].join('\n');
+  }
+
+  if (t === 'REVIEW') {
+    return [
+      '- lessonSummary must be brief and focused on the most important ideas to remember.',
+      '- keyConcept summaries must read like quick reminders, not long explanations.',
+      '- symbolMeaning should act like a review cue or memory aid.',
+      '- workedExample should be shorter and more selective than in a concept lesson.',
+      '- Practice items should give representative mixed review across the topic.',
+      '- Keep item wording concise and easy to scan.'
+    ].join('\n');
+  }
+
+  if (t === 'QUIZ') {
+    return [
+      '- lessonSummary must be very short and assessment-oriented.',
+      '- keyConcepts should remain compact because they mainly support teacher use and schema completeness.',
+      '- Practice items must function like actual assessment items.',
+      '- Questions must be directly answerable and independently readable.',
+      '- Use direct command wording such as "Solve", "Find", "Choose", "Identify", "Compare", or "Determine".',
+      '- Hints must stay short and practical.'
+    ].join('\n');
+  }
+
+  if (t === 'REMEDIATION') {
+    return [
+      '- lessonSummary must be reassuring, clear, and easy to follow.',
+      '- keyConcept summaries must be broken into smaller and simpler ideas.',
+      '- workedExample must be highly explicit and carefully sequenced.',
+      '- misconception must name a very common student mistake in plain classroom language.',
+      '- Practice items must begin with very accessible items before moving to slightly more independent work.',
+      '- The first half of the practice items should emphasize clarity and confidence-building.'
+    ].join('\n');
+  }
+
+  if (t === 'ENRICHMENT') {
+    return [
+      '- lessonSummary must frame the topic as deeper thinking, richer application, or transfer.',
+      '- keyConcept summaries should emphasize patterns, relationships, and reasoning.',
+      '- workedExample should model deeper thought, not only routine computation.',
+      '- Practice items must become more demanding as they progress.',
+      '- At least half of the practice items should require multi-step reasoning, comparison, pattern recognition, or real-world transfer.',
+      '- The later items should feel more challenging than standard on-level practice.'
+    ].join('\n');
+  }
+
+  return [
+    '- lessonSummary must provide a strong teaching overview.',
+    '- keyConcept summaries should support direct instruction with clear explanation.',
+    '- workedExample should be complete, readable, and instructionally helpful.',
+    '- Practice items should move from understanding toward application.',
+    '- Maintain a balanced mix of explanation and practice.'
+  ].join('\n');
+}
+
+function getLocalContextGuidance_() {
+  return [
+    '- Use Philippine classroom context when examples involve names, money, measurement, or everyday situations.',
+    '- Prefer pesos (₱), metric units, and familiar school or community-based situations when appropriate.',
+    '- Use age-appropriate local names and realistic classroom-friendly contexts.'
   ].join('\n');
 }
 
