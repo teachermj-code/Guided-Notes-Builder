@@ -2058,7 +2058,7 @@ function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
  ***************************************/
 function buildPrintableDocument_(bodyHtml, options) {
   const opts = options || {};
-  const footerText = opts.footerText || APP_TITLE;
+  const footerText = String(opts.footerText || APP_TITLE);
   const documentTitle = opts.documentTitle || APP_TITLE;
 
   return `
@@ -2075,36 +2075,507 @@ function buildPrintableDocument_(bodyHtml, options) {
       </head>
       <body class="print-mode">
         ${bodyHtml}
-        <div class="pdf-footnote">${escapeHtml_(footerText)}</div>
         <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
         <script>
-          function renderMathForPrint() {
-            if (typeof renderMathInElement !== 'function') {
-              window.setTimeout(renderMathForPrint, 150);
-              return;
+          (function () {
+            const PRINT_LAYOUT = Object.freeze({
+              safeContentHeightIn: 9.35,
+              continuationSuffix: ' (continued)',
+              footerText: ${JSON.stringify(footerText)}
+            });
+
+            function measureInches(inches) {
+              const probe = document.createElement('div');
+              probe.style.position = 'absolute';
+              probe.style.left = '-99999px';
+              probe.style.top = '0';
+              probe.style.width = '1px';
+              probe.style.height = inches + 'in';
+              probe.style.visibility = 'hidden';
+              document.body.appendChild(probe);
+              const px = probe.getBoundingClientRect().height;
+              probe.remove();
+              return px;
             }
 
-            renderMathInElement(document.body, {
-              delimiters: [
-                { left: '\\\\[', right: '\\\\]', display: true },
-                { left: '\\\\(', right: '\\\\)', display: false }
-              ],
-              throwOnError: false
-            });
+            function createMeasureRoot() {
+              const root = document.createElement('div');
+              root.id = 'printMeasureRoot';
+              document.body.appendChild(root);
+              return root;
+            }
 
-            Promise.resolve(document.fonts ? document.fonts.ready : null).then(function () {
-              window.requestAnimationFrame(function () {
+            function createPageShell() {
+              const page = document.createElement('div');
+              page.className = 'print-page';
+
+              const content = document.createElement('div');
+              content.className = 'print-page-content';
+
+              const footer = document.createElement('div');
+              footer.className = 'print-page-footer';
+
+              page.appendChild(content);
+              page.appendChild(footer);
+
+              return page;
+            }
+
+            function getDirectChildren(node) {
+              return Array.prototype.slice.call(node.children || []);
+            }
+
+            function getDirectSectionTitle(section) {
+              return getDirectChildren(section).find(function (child) {
+                return child.classList && child.classList.contains('section-title');
+              }) || null;
+            }
+
+            function addContinuationLabel(sectionClone) {
+              const title = getDirectSectionTitle(sectionClone);
+              if (!title) return;
+
+              if (title.textContent.indexOf(PRINT_LAYOUT.continuationSuffix) === -1) {
+                title.textContent += PRINT_LAYOUT.continuationSuffix;
+              }
+            }
+
+            function simplifyContinuationShell(sectionClone) {
+              const directChildren = getDirectChildren(sectionClone);
+
+              directChildren.forEach(function (child) {
+                const keep =
+                  (child.classList && child.classList.contains('section-title')) ||
+                  child.tagName.toLowerCase() === 'article' ||
+                  (child.classList && (
+                    child.classList.contains('card') ||
+                    child.classList.contains('guided-stage-grid') ||
+                    child.classList.contains('review-list') ||
+                    child.classList.contains('remediation-grid') ||
+                    child.classList.contains('enrichment-grid') ||
+                    child.classList.contains('answer-key-list')
+                  ));
+
+                if (!keep) {
+                  child.remove();
+                }
+              });
+
+              addContinuationLabel(sectionClone);
+            }
+
+            function measureFragment(fragment, measureRoot) {
+              measureRoot.innerHTML = '';
+
+              const page = createPageShell();
+              page.querySelector('.print-page-content').appendChild(fragment.cloneNode(true));
+              measureRoot.appendChild(page);
+
+              return page.querySelector('.print-page-content').getBoundingClientRect().height;
+            }
+
+            function pageWouldFit(page, fragment, maxHeight, measureRoot) {
+              measureRoot.innerHTML = '';
+
+              const testPage = page.cloneNode(true);
+              testPage.querySelector('.print-page-content').appendChild(fragment.cloneNode(true));
+              measureRoot.appendChild(testPage);
+
+              const height = testPage.querySelector('.print-page-content').getBoundingClientRect().height;
+              return height <= maxHeight;
+            }
+
+            function getSectionStrategy(section) {
+              const directChildren = getDirectChildren(section);
+
+              const directArticles = directChildren.filter(function (child) {
+                return child.tagName.toLowerCase() === 'article';
+              });
+              if (directArticles.length) {
+                return { mode: 'direct-articles' };
+              }
+
+              const directContainerSelectors = [
+                '.guided-stage-grid',
+                '.review-list',
+                '.remediation-grid',
+                '.enrichment-grid',
+                '.answer-key-list'
+              ];
+
+              for (let i = 0; i < directContainerSelectors.length; i++) {
+                const selector = directContainerSelectors[i];
+                const container = directChildren.find(function (child) {
+                  return child.matches && child.matches(selector);
+                });
+
+                if (container && container.children && container.children.length) {
+                  return {
+                    mode: 'direct-container',
+                    selector: selector
+                  };
+                }
+              }
+
+              const directCard = directChildren.find(function (child) {
+                return child.classList && child.classList.contains('card');
+              });
+
+              if (directCard) {
+                const nestedSelectors = [
+                  '.criteria-list',
+                  '.teacher-note-list',
+                  '.compact-vocab-list',
+                  '.vocab-grid'
+                ];
+
+                for (let i = 0; i < nestedSelectors.length; i++) {
+                  const selector = nestedSelectors[i];
+                  const container = directCard.querySelector(selector);
+
+                  if (container && container.children && container.children.length) {
+                    return {
+                      mode: 'nested-card-container',
+                      selector: selector
+                    };
+                  }
+                }
+              }
+
+              return null;
+            }
+
+            function getStrategyItems(section, strategy) {
+              if (!strategy) return [];
+
+              if (strategy.mode === 'direct-articles') {
+                return getDirectChildren(section).filter(function (child) {
+                  return child.tagName.toLowerCase() === 'article';
+                });
+              }
+
+              if (strategy.mode === 'direct-container') {
+                const container = getDirectChildren(section).find(function (child) {
+                  return child.matches && child.matches(strategy.selector);
+                });
+                return container ? getDirectChildren(container) : [];
+              }
+
+              if (strategy.mode === 'nested-card-container') {
+                const card = getDirectChildren(section).find(function (child) {
+                  return child.classList && child.classList.contains('card');
+                });
+                if (!card) return [];
+
+                const container = card.querySelector(strategy.selector);
+                return container ? getDirectChildren(container) : [];
+              }
+
+              return [];
+            }
+
+            function createSectionShell(section, strategy, continuation) {
+              const clone = section.cloneNode(true);
+
+              if (strategy.mode === 'direct-articles') {
+                getDirectChildren(clone).forEach(function (child) {
+                  if (child.tagName.toLowerCase() === 'article') {
+                    child.remove();
+                  }
+                });
+
+                if (continuation) {
+                  simplifyContinuationShell(clone);
+                }
+
+                return clone;
+              }
+
+              if (strategy.mode === 'direct-container') {
+                const container = getDirectChildren(clone).find(function (child) {
+                  return child.matches && child.matches(strategy.selector);
+                });
+
+                if (container) {
+                  container.innerHTML = '';
+                }
+
+                if (continuation) {
+                  simplifyContinuationShell(clone);
+                }
+
+                return clone;
+              }
+
+              if (strategy.mode === 'nested-card-container') {
+                const card = getDirectChildren(clone).find(function (child) {
+                  return child.classList && child.classList.contains('card');
+                });
+
+                if (card) {
+                  const container = card.querySelector(strategy.selector);
+                  if (container) {
+                    container.innerHTML = '';
+                  }
+                }
+
+                if (continuation) {
+                  simplifyContinuationShell(clone);
+                }
+
+                return clone;
+              }
+
+              return clone;
+            }
+
+            function appendItemToShell(shell, strategy, itemNode) {
+              if (strategy.mode === 'direct-articles') {
+                shell.appendChild(itemNode);
+                return;
+              }
+
+              if (strategy.mode === 'direct-container') {
+                const container = getDirectChildren(shell).find(function (child) {
+                  return child.matches && child.matches(strategy.selector);
+                });
+                if (container) {
+                  container.appendChild(itemNode);
+                }
+                return;
+              }
+
+              if (strategy.mode === 'nested-card-container') {
+                const card = getDirectChildren(shell).find(function (child) {
+                  return child.classList && child.classList.contains('card');
+                });
+                if (!card) return;
+
+                const container = card.querySelector(strategy.selector);
+                if (container) {
+                  container.appendChild(itemNode);
+                }
+              }
+            }
+
+            function getShellItemCount(shell, strategy) {
+              if (strategy.mode === 'direct-articles') {
+                return getDirectChildren(shell).filter(function (child) {
+                  return child.tagName.toLowerCase() === 'article';
+                }).length;
+              }
+
+              if (strategy.mode === 'direct-container') {
+                const container = getDirectChildren(shell).find(function (child) {
+                  return child.matches && child.matches(strategy.selector);
+                });
+                return container ? container.children.length : 0;
+              }
+
+              if (strategy.mode === 'nested-card-container') {
+                const card = getDirectChildren(shell).find(function (child) {
+                  return child.classList && child.classList.contains('card');
+                });
+                if (!card) return 0;
+
+                const container = card.querySelector(strategy.selector);
+                return container ? container.children.length : 0;
+              }
+
+              return 0;
+            }
+
+            function removeLastItemFromShell(shell, strategy) {
+              if (strategy.mode === 'direct-articles') {
+                const articles = getDirectChildren(shell).filter(function (child) {
+                  return child.tagName.toLowerCase() === 'article';
+                });
+                if (articles.length) {
+                  articles[articles.length - 1].remove();
+                }
+                return;
+              }
+
+              if (strategy.mode === 'direct-container') {
+                const container = getDirectChildren(shell).find(function (child) {
+                  return child.matches && child.matches(strategy.selector);
+                });
+                if (container && container.lastElementChild) {
+                  container.lastElementChild.remove();
+                }
+                return;
+              }
+
+              if (strategy.mode === 'nested-card-container') {
+                const card = getDirectChildren(shell).find(function (child) {
+                  return child.classList && child.classList.contains('card');
+                });
+                if (!card) return;
+
+                const container = card.querySelector(strategy.selector);
+                if (container && container.lastElementChild) {
+                  container.lastElementChild.remove();
+                }
+              }
+            }
+
+            function splitSectionIntoFragments(section, maxHeight, measureRoot) {
+              const fullClone = section.cloneNode(true);
+
+              if (measureFragment(fullClone, measureRoot) <= maxHeight) {
+                return [fullClone];
+              }
+
+              const strategy = getSectionStrategy(section);
+              if (!strategy) {
+                return [fullClone];
+              }
+
+              const items = getStrategyItems(section, strategy).map(function (item) {
+                return item.cloneNode(true);
+              });
+
+              if (!items.length) {
+                return [fullClone];
+              }
+
+              const fragments = [];
+              let shell = createSectionShell(section, strategy, false);
+
+              items.forEach(function (item) {
+                appendItemToShell(shell, strategy, item.cloneNode(true));
+
+                if (measureFragment(shell, measureRoot) <= maxHeight) {
+                  return;
+                }
+
+                removeLastItemFromShell(shell, strategy);
+
+                if (getShellItemCount(shell, strategy) > 0) {
+                  fragments.push(shell);
+                  shell = createSectionShell(section, strategy, true);
+                  appendItemToShell(shell, strategy, item.cloneNode(true));
+
+                  if (measureFragment(shell, measureRoot) > maxHeight) {
+                    fragments.push(shell);
+                    shell = createSectionShell(section, strategy, true);
+                  }
+                } else {
+                  appendItemToShell(shell, strategy, item.cloneNode(true));
+                  fragments.push(shell);
+                  shell = createSectionShell(section, strategy, true);
+                }
+              });
+
+              if (getShellItemCount(shell, strategy) > 0 || !fragments.length) {
+                fragments.push(shell);
+              }
+
+              return fragments;
+            }
+
+            function buildPagesFromFragments(fragments, maxHeight, measureRoot) {
+              const pages = [];
+              let currentPage = createPageShell();
+              let currentContent = currentPage.querySelector('.print-page-content');
+
+              fragments.forEach(function (fragment) {
+                if (!currentContent.children.length) {
+                  currentContent.appendChild(fragment.cloneNode(true));
+                  return;
+                }
+
+                if (pageWouldFit(currentPage, fragment, maxHeight, measureRoot)) {
+                  currentContent.appendChild(fragment.cloneNode(true));
+                } else {
+                  pages.push(currentPage);
+                  currentPage = createPageShell();
+                  currentContent = currentPage.querySelector('.print-page-content');
+                  currentContent.appendChild(fragment.cloneNode(true));
+                }
+              });
+
+              if (currentContent.children.length) {
+                pages.push(currentPage);
+              }
+
+              pages.forEach(function (page, index) {
+                const footer = page.querySelector('.print-page-footer');
+                footer.textContent =
+                  PRINT_LAYOUT.footerText + ' • Page ' + (index + 1) + ' of ' + pages.length;
+              });
+
+              return pages;
+            }
+
+            function paginateLessonForPrint() {
+              if (document.querySelector('.print-pages')) return;
+
+              const lesson = document.querySelector('.lesson-sheet');
+              if (!lesson) return;
+
+              const measureRoot = createMeasureRoot();
+              const maxHeight = measureInches(PRINT_LAYOUT.safeContentHeightIn);
+              const fragments = [];
+
+              getDirectChildren(lesson).forEach(function (child) {
+                const tag = child.tagName.toLowerCase();
+
+                if (tag === 'section') {
+                  splitSectionIntoFragments(child, maxHeight, measureRoot).forEach(function (fragment) {
+                    fragments.push(fragment);
+                  });
+                } else {
+                  fragments.push(child.cloneNode(true));
+                }
+              });
+
+              const pages = buildPagesFromFragments(fragments, maxHeight, measureRoot);
+              const pagesRoot = document.createElement('div');
+              pagesRoot.className = 'print-pages';
+
+              pages.forEach(function (page) {
+                pagesRoot.appendChild(page);
+              });
+
+              lesson.replaceWith(pagesRoot);
+              measureRoot.remove();
+            }
+
+            function renderMathThenPaginateAndPrint() {
+              if (typeof renderMathInElement !== 'function') {
+                window.setTimeout(renderMathThenPaginateAndPrint, 150);
+                return;
+              }
+
+              renderMathInElement(document.body, {
+                delimiters: [
+                  { left: '\\\\[', right: '\\\\]', display: true },
+                  { left: '\\\\(', right: '\\\\)', display: false }
+                ],
+                throwOnError: false
+              });
+
+              Promise.resolve(document.fonts ? document.fonts.ready : null).then(function () {
                 window.requestAnimationFrame(function () {
-                  window.print();
+                  window.requestAnimationFrame(function () {
+                    paginateLessonForPrint();
+
+                    window.requestAnimationFrame(function () {
+                      window.requestAnimationFrame(function () {
+                        window.print();
+                      });
+                    });
+                  });
                 });
               });
-            });
-          }
+            }
 
-          window.addEventListener('load', function () {
-            window.setTimeout(renderMathForPrint, 150);
-          });
+            window.addEventListener('load', function () {
+              window.setTimeout(renderMathThenPaginateAndPrint, 180);
+            });
+          })();
         </script>
       </body>
     </html>
@@ -2129,7 +2600,14 @@ function getPrintStyles_() {
   return [
     '@page{size:Letter; margin:0.55in;}',
     'html,body{width:100%;}',
-    'body.print-mode{background:#fff !important;color:#000;}',
+    'body.print-mode{margin:0;padding:0;background:#fff !important;color:#000;}',
+    '.print-pages{width:100%;}',
+    '.print-page{position:relative;min-height:9.7in;padding-bottom:0.28in;break-after:page;page-break-after:always;overflow:visible;}',
+    '.print-page:last-child{break-after:auto;page-break-after:auto;}',
+    '.print-page-content{width:100%;overflow:visible;}',
+    '.print-page-footer{position:absolute;left:0;right:0;bottom:0;padding-top:8px;border-top:1px solid #ddd;text-align:center;font-size:10px;line-height:1.2;color:#666;}',
+    '#printMeasureRoot{position:absolute;left:-99999px;top:0;width:100%;visibility:hidden;pointer-events:none;overflow:hidden;}',
+
     'body.print-mode .lesson-sheet{width:100%;max-width:none;padding:0;margin:0 auto;}',
     'body.print-mode .lesson-header, body.print-mode .card{box-shadow:none;}',
     'body.print-mode .lesson-header{padding:14px;margin-bottom:10px;break-inside:avoid;page-break-inside:avoid;}',
@@ -2144,15 +2622,18 @@ function getPrintStyles_() {
     'body.print-mode .concept-summary, body.print-mode .practice-question, body.print-mode .vocab-definition, body.print-mode .teacher-answer-box, body.print-mode .answer-reveal, body.print-mode .sub-card, body.print-mode .example-box, body.print-mode .misconception-box, body.print-mode .objective-text, body.print-mode .summary-text{font-size:12px;line-height:1.5;white-space:pre-line;overflow-wrap:anywhere;word-break:break-word;overflow:visible;}',
     'body.print-mode .formula-value{font-size:13px;line-height:1.45;overflow:visible;word-break:break-word;}',
     'body.print-mode .formula-box, body.print-mode .sub-card, body.print-mode .example-box, body.print-mode .misconception-box, body.print-mode .teacher-answer-box, body.print-mode .answer-key-item{break-inside:avoid;page-break-inside:avoid;}',
+
     'body.print-mode .lesson-meta{display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:6px !important;}',
     'body.print-mode .lesson-meta>div{padding:8px 10px;border-radius:10px;}',
     'body.print-mode .meta-label{font-size:9px;line-height:1.1;margin-bottom:2px;}',
     'body.print-mode .meta-value{font-size:11px;line-height:1.25;}',
     'body.print-mode .vocab-grid{grid-template-columns:repeat(auto-fit,minmax(2in,1fr));gap:8px;}',
+
     'body.print-mode .btn, body.print-mode .feedback, body.print-mode .answer-reveal.hidden{display:none !important;}',
     'body.print-mode .practice-controls{display:block;}',
     'body.print-mode .answer-input{display:block;width:100%;border:1px solid #999;min-width:0;}',
     'body.print-mode .print-answer-space{margin-top:12px;}',
+
     'body.print-mode .answer-key-list{gap:8px;}',
     'body.print-mode .answer-key-item{padding:10px 12px;border-radius:10px;}',
     'body.print-mode .answer-key-number{font-size:10px;margin-bottom:4px;}',
@@ -2161,10 +2642,11 @@ function getPrintStyles_() {
     'body.print-mode .answer-key-hint{font-size:11px;line-height:1.4;margin-top:4px;}',
     'body.print-mode .lesson-sheet[data-copy-mode="TEACHER"] .answer-key-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}',
     '@media print and (max-width:700px){body.print-mode .lesson-sheet[data-copy-mode="TEACHER"] .answer-key-list{grid-template-columns:1fr;}}',
+
     'body.print-mode .katex-display{margin:0.35em 0;overflow:visible;}',
     'body.print-mode .katex{max-width:100%;}',
     'body.print-mode .editable.active-edit{outline:none;background:transparent;}',
-    'body.print-mode .pdf-footnote{display:block !important;margin-top:0.35in;padding-top:10px;text-align:center;font-size:10px;line-height:1.2;color:#666;border-top:1px solid #ddd;break-inside:avoid;page-break-inside:avoid;}'
+    'body.print-mode .pdf-footnote{display:none !important;}'
   ].join('');
 }
 
