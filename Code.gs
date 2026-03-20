@@ -89,6 +89,21 @@ function getLessonStyles_() {
     '.review-focus-strip{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:14px;padding:14px 16px;margin-bottom:14px;}',
     '.review-focus-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--template-accent-dark);margin-bottom:6px;}',
     '.review-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}',
+    '.remediation-strip,.enrichment-strip{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:14px;padding:14px 16px;margin-bottom:14px;}',
+    '.remediation-strip-title,.enrichment-strip-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--template-accent-dark);margin-bottom:6px;}',
+    '.remediation-grid,.enrichment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}',
+    '.remediation-card,.enrichment-card{background:#fff;border:1px solid var(--template-subtle-border);border-radius:14px;padding:14px;box-shadow:none;break-inside:avoid;page-break-inside:avoid;}',
+    '.remediation-card .concept-summary,.enrichment-card .concept-summary{font-size:13px;line-height:1.6;margin-bottom:8px;}',
+    '.remediation-help-box,.enrichment-note-box{background:#fff;border:1px dashed var(--template-soft-border);border-radius:10px;padding:10px 12px;margin-top:8px;}',
+    '.remediation-model-card{background:#fff;border:1px solid var(--template-soft-border);border-left:5px solid var(--template-accent);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:none;}',
+    '.remediation-model-title,.enrichment-card-title{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--template-accent-dark);margin-bottom:8px;}',
+    '.lesson-sheet[data-template="REMEDIATION"] .practice-card{background:#fff;border:1px solid var(--template-soft-border);box-shadow:none;}',
+    '.lesson-sheet[data-template="REMEDIATION"] .practice-card .teacher-answer-box{background:var(--template-soft-bg);border:1px dashed var(--template-soft-border);}',
+    '.lesson-sheet[data-template="ENRICHMENT"] .practice-card{background:#fff;border:1px solid var(--template-soft-border);border-left:5px solid var(--template-accent);box-shadow:none;}',
+    '.lesson-sheet[data-template="ENRICHMENT"] .challenge-section .practice-card{border-left-color:var(--template-accent);}',
+    '.lesson-sheet[data-template="ENRICHMENT"] .transfer-section .practice-card{border-left-color:var(--template-accent-dark);}',
+    '.lesson-sheet[data-template="ENRICHMENT"] .practice-card .teacher-answer-box{background:var(--template-soft-bg);border:1px dashed var(--template-soft-border);}',
+    '.lesson-sheet[data-template="ENRICHMENT"] .practice-section .section-title{letter-spacing:.05em;}',
     '.review-mini-card{background:#fff;border:1px solid var(--template-subtle-border);border-radius:14px;padding:14px;box-shadow:none;}',
     '.review-mini-title{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--template-accent-dark);margin-bottom:8px;}',
     '.review-rule-box{background:var(--template-subtle-bg);border:1px solid var(--template-subtle-border);border-radius:10px;padding:10px 12px;margin:8px 0 10px;}',
@@ -146,7 +161,7 @@ function getLessonStyles_() {
     '.editable.active-edit{outline:2px dashed var(--template-accent);outline-offset:2px;background:var(--template-soft-bg);cursor:text;}',
     '.lesson-sheet .btn-primary{background:var(--template-accent);color:#fff;}',
     '.lesson-sheet .btn-light{background:var(--template-soft-bg);color:var(--template-accent-dark);border:1px solid var(--template-soft-border);}',
-    '@media (max-width: 760px){.lesson-meta,.vocab-grid,.review-grid,.quiz-meta-lines,.guided-stage-grid,.review-list{grid-template-columns:1fr;}.lesson-sheet[data-template="REVIEW"] .compact-vocab-list{columns:1;}}'
+    '@media (max-width: 760px){.lesson-meta,.vocab-grid,.review-grid,.quiz-meta-lines,.guided-stage-grid,.review-list,.remediation-grid,.enrichment-grid{grid-template-columns:1fr;}.lesson-sheet[data-template="REVIEW"] .compact-vocab-list{columns:1;}}'
   ].join('');
 }
 
@@ -939,6 +954,14 @@ function renderTemplateBody_(lesson, options) {
     return renderReviewTemplate_(lesson, teacherView, forPrint);
   }
 
+  if (templateType === 'REMEDIATION') {
+    return renderRemediationTemplate_(lesson, teacherView, forPrint);
+  }
+
+  if (templateType === 'ENRICHMENT') {
+    return renderEnrichmentTemplate_(lesson, teacherView, forPrint);
+  }
+
   return renderConceptTemplate_(lesson, teacherView, forPrint);
 }
 
@@ -1070,6 +1093,214 @@ function renderReviewTemplate_(lesson, teacherView, forPrint) {
     }),
     renderTeacherNotesSection_(lesson, teacherView)
   ].join('');
+}
+
+function renderRemediationTemplate_(lesson, teacherView, forPrint) {
+  const splitIndex = Math.ceil((lesson.practiceItems || []).length / 2);
+
+  return [
+    renderObjectiveSection_(lesson),
+    renderSuccessCriteriaSection_(lesson),
+    renderVocabularySection_(lesson, true),
+    renderRemediationFocusSection_(lesson),
+    renderRemediationConceptSection_(lesson),
+    renderRemediationModelSection_(lesson),
+    renderPracticeGroupSection_(lesson, teacherView, forPrint, {
+      title: 'TRY WITH HELP',
+      note: teacherView
+        ? 'Use these first items as supported practice. Teacher view shows accepted answers and hints.'
+        : 'Start with these supported items. Use the hints when needed and focus on one step at a time.',
+      className: 'try-help-section'
+    }, 0, splitIndex),
+    renderPracticeGroupSection_(lesson, teacherView, forPrint, {
+      title: 'CHECK YOURSELF',
+      note: teacherView
+        ? 'Use these items to see whether students can apply the skill more independently.'
+        : 'Complete these items on your own to check your understanding.',
+      className: 'check-yourself-section'
+    }, splitIndex, lesson.practiceItems.length),
+    renderTeacherNotesSection_(lesson, teacherView)
+  ].join('');
+}
+
+function renderEnrichmentTemplate_(lesson, teacherView, forPrint) {
+  const splitIndex = Math.ceil((lesson.practiceItems || []).length / 2);
+
+  return [
+    renderObjectiveSection_(lesson),
+    renderSuccessCriteriaSection_(lesson),
+    renderVocabularySection_(lesson, true),
+    renderEnrichmentRecallSection_(lesson),
+    renderEnrichmentConceptSection_(lesson),
+    renderPracticeGroupSection_(lesson, teacherView, forPrint, {
+      title: 'CHALLENGE',
+      note: teacherView
+        ? 'These items push beyond routine practice and may need stronger reasoning.'
+        : 'Tackle these challenge items by applying the ideas carefully and explaining your thinking.',
+      className: 'challenge-section'
+    }, 0, splitIndex),
+    renderPracticeGroupSection_(lesson, teacherView, forPrint, {
+      title: 'TRANSFER',
+      note: teacherView
+        ? 'These items check whether students can transfer the skill to less familiar situations.'
+        : 'Apply the ideas in new or less familiar situations and justify your thinking clearly.',
+      className: 'transfer-section'
+    }, splitIndex, lesson.practiceItems.length),
+    renderTeacherNotesSection_(lesson, teacherView)
+  ].join('');
+}
+
+function renderRemediationFocusSection_(lesson) {
+  return `
+    <section>
+      <h2 class="section-title">UNDERSTAND → FOLLOW → TRY WITH HELP → CHECK YOURSELF</h2>
+      <div class="remediation-strip">
+        <div class="remediation-strip-title">Support Path</div>
+        <div class="editable summary-text" data-field="lessonSummary">${escapeHtml_(lesson.lessonSummary)}</div>
+      </div>
+    </section>
+  `;
+}
+
+function renderRemediationConceptSection_(lesson) {
+  const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
+    return `
+      <article class="remediation-card" data-concept-index="${index}">
+        <div class="remediation-model-title">UNDERSTAND</div>
+        <h3 class="concept-title editable" data-concept-field="heading">${escapeHtml_(item.heading)}</h3>
+
+        <div class="concept-summary editable" data-concept-field="summary">${escapeHtml_(item.summary)}</div>
+
+        ${item.formula ? `
+          <div class="mini-formula-box">
+            <div class="mini-label">Rule / Formula</div>
+            <div class="formula-value formula-text" data-concept-field="formula">${escapeHtml_(item.formula)}</div>
+          </div>
+        ` : ''}
+
+        <div class="remediation-help-box">
+          <div class="sub-card-label">Helpful Terms and Symbols</div>
+          <div class="editable compact-note" data-concept-field="symbolMeaning">${escapeHtml_(item.symbolMeaning)}</div>
+        </div>
+
+        ${item.misconception ? `
+          <div class="misconception-box">
+            <strong>Watch Out:</strong>
+            <div class="editable" data-concept-field="misconception">${escapeHtml_(item.misconception)}</div>
+          </div>
+        ` : ''}
+      </article>
+    `;
+  }).join('');
+
+  return `
+    <section>
+      <h2 class="section-title">UNDERSTAND</h2>
+      <div class="section-note">Study the idea first. Focus on the rule, the key terms, and the common mistake to avoid.</div>
+      <div class="remediation-grid">
+        ${conceptsHtml}
+      </div>
+    </section>
+  `;
+}
+
+function renderRemediationModelSection_(lesson) {
+  const modelsHtml = lesson.keyConcepts.map(function (item, index) {
+    return `
+      <article class="remediation-model-card" data-remediation-model-index="${index}">
+        <div class="remediation-model-title">FOLLOW THE EXAMPLE</div>
+        <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
+        <div class="guided-transition-note">Read the worked example carefully, then copy the same steps in the supported practice.</div>
+        <div class="example-box">
+          <div>${escapeHtml_(item.workedExample)}</div>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  return `
+    <section>
+      <h2 class="section-title">FOLLOW</h2>
+      <div class="section-note">Use these worked examples as step-by-step guides before answering on your own.</div>
+      ${modelsHtml}
+    </section>
+  `;
+}
+
+function renderEnrichmentRecallSection_(lesson) {
+  return `
+    <section>
+      <h2 class="section-title">RECALL → THINK DEEPER → CHALLENGE → TRANSFER</h2>
+      <div class="enrichment-strip">
+        <div class="enrichment-strip-title">Extension Path</div>
+        <div class="editable summary-text" data-field="lessonSummary">${escapeHtml_(lesson.lessonSummary)}</div>
+      </div>
+    </section>
+  `;
+}
+
+function renderEnrichmentConceptSection_(lesson) {
+  const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
+    return `
+      <article class="enrichment-card" data-concept-index="${index}">
+        <div class="enrichment-card-title">THINK DEEPER</div>
+        <h3 class="concept-title editable" data-concept-field="heading">${escapeHtml_(item.heading)}</h3>
+
+        <div class="concept-summary editable" data-concept-field="summary">${escapeHtml_(item.summary)}</div>
+
+        ${item.formula ? `
+          <div class="review-rule-box">
+            <div class="mini-label">Key Rule / Relationship</div>
+            <div class="formula-value formula-text" data-concept-field="formula">${escapeHtml_(item.formula)}</div>
+          </div>
+        ` : ''}
+
+        <div class="enrichment-note-box">
+          <div class="sub-card-label">Big Idea to Keep in Mind</div>
+          <div class="editable compact-note" data-concept-field="symbolMeaning">${escapeHtml_(item.symbolMeaning)}</div>
+        </div>
+
+        ${item.misconception ? `
+          <div class="misconception-box">
+            <strong>Avoid This Shortcut Error:</strong>
+            <div class="editable" data-concept-field="misconception">${escapeHtml_(item.misconception)}</div>
+          </div>
+        ` : ''}
+      </article>
+    `;
+  }).join('');
+
+  return `
+    <section>
+      <h2 class="section-title">THINK DEEPER</h2>
+      <div class="section-note">Review the big ideas first, then use them in more demanding and less familiar tasks.</div>
+      <div class="enrichment-grid">
+        ${conceptsHtml}
+      </div>
+    </section>
+  `;
+}
+
+function renderPracticeGroupSection_(lesson, teacherView, forPrint, config, startIndex, endIndex) {
+  const cfg = config || {};
+  const title = cfg.title || 'Practice';
+  const note = cfg.note || '';
+  const className = cfg.className || '';
+  const subset = (lesson.practiceItems || []).slice(startIndex, endIndex);
+
+  if (!subset.length) return '';
+
+  const practiceHtml = subset.map(function (item, offset) {
+    return renderPracticeItemHtml_(item, startIndex + offset, teacherView, forPrint);
+  }).join('');
+
+  return `
+    <section class="practice-section ${className}">
+      <h2 class="section-title">${escapeHtml_(title)}</h2>
+      ${note ? `<div class="section-note">${escapeHtml_(note)}</div>` : ''}
+      ${practiceHtml}
+    </section>
+  `;
 }
 
 function renderQuizTemplate_(lesson, teacherView, forPrint) {
@@ -1609,7 +1840,7 @@ function getPrintStyles_() {
     'body.print-mode .btn, body.print-mode .feedback, body.print-mode .answer-reveal.hidden{display:none !important;}',
     'body.print-mode .practice-controls{display:block;}',
     'body.print-mode .answer-input{display:block;width:100%;border:1px solid #999;min-width:0;}',
-   '@media print and (max-width: 700px){body.print-mode .lesson-sheet[data-template="REVIEW"] .review-list{grid-template-columns:1fr;}body.print-mode .lesson-sheet[data-template="REVIEW"] .compact-vocab-list{columns:1;}}', 
+    '@media print and (max-width: 700px){body.print-mode .lesson-sheet[data-template="REVIEW"] .review-list{grid-template-columns:1fr;}body.print-mode .lesson-sheet[data-template="REVIEW"] .compact-vocab-list{columns:1;}}',
     'body.print-mode .btn, body.print-mode .feedback, body.print-mode .answer-reveal.hidden{display:none !important;}',
     'body.print-mode .concept-card, body.print-mode .practice-card{break-inside:auto;page-break-inside:auto;}',
     'body.print-mode .formula-box, body.print-mode .sub-card, body.print-mode .example-box, body.print-mode .misconception-box{break-inside:avoid;page-break-inside:avoid;}',
