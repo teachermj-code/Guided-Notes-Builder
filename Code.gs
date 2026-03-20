@@ -43,7 +43,6 @@ function getLessonStyles_() {
     '.eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--template-accent);margin-bottom:8px;}',
     '.lesson-title{margin:0;font-size:28px;line-height:1.2;color:var(--template-accent-dark);}',
     '.lesson-meta>div{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:12px;padding:12px;}',
-    '.lesson-meta>div{background:#f8fbff;border:1px solid #d9e6ff;border-radius:12px;padding:12px;}',
     '.meta-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:#5b6b82;margin-bottom:4px;}',
     '.meta-value{display:block;font-size:14px;font-weight:600;color:#1c2e45;}',
     '.section-title{font-size:18px;margin:24px 0 6px;color:var(--template-accent);}',
@@ -76,6 +75,22 @@ function getLessonStyles_() {
     '.compact-note{font-size:13px;line-height:1.6;}',
     '.directions-box{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:14px;padding:14px 16px;line-height:1.7;font-size:13px;margin-bottom:14px;}',
     '.directions-list{margin:8px 0 0;padding-left:20px;}',
+    '.quiz-info-card{background:#fff;border:1px solid var(--template-soft-border);border-radius:14px;padding:14px 16px;margin-bottom:14px;}',
+    '.quiz-meta-lines{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}',
+    '.quiz-line{display:flex;align-items:flex-end;gap:8px;min-height:28px;}',
+    '.quiz-line-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#5b6b82;white-space:nowrap;}',
+    '.quiz-line-fill{flex:1;border-bottom:1.5px solid #7a869a;height:20px;}',
+    '.quiz-focus-card{background:var(--template-subtle-bg);border:1px solid var(--template-subtle-border);border-radius:14px;padding:14px 16px;margin-bottom:14px;}',
+    '.quiz-focus-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--template-accent-dark);margin-bottom:6px;}',
+    '.quiz-focus-text{font-size:13px;line-height:1.6;}',
+    '.quiz-focus-block{margin-top:12px;}',
+    '.lesson-sheet[data-template="QUIZ"] .practice-section .section-note{margin-bottom:10px;}',
+    '.lesson-sheet[data-template="QUIZ"] .practice-card{background:#fff;border:1px solid #ead9cb;border-radius:12px;padding:16px;margin-bottom:10px;box-shadow:none;}',
+    '.lesson-sheet[data-template="QUIZ"] .practice-number{font-size:11px;letter-spacing:.08em;color:var(--template-accent-dark);margin-bottom:10px;}',
+    '.lesson-sheet[data-template="QUIZ"] .practice-question{font-size:15px;line-height:1.75;margin-bottom:14px;}',
+    '.lesson-sheet[data-template="QUIZ"] .mc-choice{background:#fff;border-color:#e7d7c7;}',
+    '.lesson-sheet[data-template="QUIZ"] .option-preview{background:#fffaf5;border-color:#edd5c4;}',
+    '.lesson-sheet[data-template="QUIZ"] .teacher-answer-box{background:#fffaf5;border:1px solid #edd5c4;}',
     '.practice-number{font-size:12px;font-weight:700;color:#5b6b82;text-transform:uppercase;margin-bottom:8px;}',
     '.practice-question{font-size:14px;line-height:1.7;margin-bottom:12px;}',
     '.practice-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}',
@@ -99,7 +114,7 @@ function getLessonStyles_() {
     '.editable.active-edit{outline:2px dashed var(--template-accent);outline-offset:2px;background:var(--template-soft-bg);cursor:text;}',
     '.lesson-sheet .btn-primary{background:var(--template-accent);color:#fff;}',
     '.lesson-sheet .btn-light{background:var(--template-soft-bg);color:var(--template-accent-dark);border:1px solid var(--template-soft-border);}',
-    '@media (max-width: 760px){.lesson-meta,.vocab-grid,.review-grid{grid-template-columns:1fr;}}'
+    '@media (max-width: 760px){.lesson-meta,.vocab-grid,.review-grid,.quiz-meta-lines{grid-template-columns:1fr;}}'
   ].join('');
 }
 
@@ -948,13 +963,14 @@ function renderReviewTemplate_(lesson, teacherView, forPrint) {
 
 function renderQuizTemplate_(lesson, teacherView, forPrint) {
   return [
-    teacherView ? renderObjectiveSection_(lesson) : '',
-    renderQuizDirectionsSection_(),
+    teacherView ? renderQuizTeacherOverviewSection_(lesson) : '',
+    renderQuizInfoSection_(teacherView),
+    renderQuizDirectionsSection_(teacherView, forPrint),
     renderPracticeSection_(lesson, teacherView, forPrint, {
-      title: 'Assessment Items',
+      title: 'Quiz Items',
       note: teacherView
-        ? 'Teacher copy includes accepted answers and hints.'
-        : 'Read each item carefully and answer each question independently.'
+        ? 'Teacher copy includes accepted answers and hints beside each item.'
+        : 'Complete all items independently and review your answers before submitting.'
     }),
     renderTeacherNotesSection_(lesson, teacherView)
   ].join('');
@@ -980,8 +996,8 @@ function renderSuccessCriteriaSection_(lesson) {
       <div class="card">
         <ul class="criteria-list">
           ${lesson.successCriteria.map(function (item, index) {
-            return `<li class="editable" data-criteria-index="${index}">${escapeHtml_(item)}</li>`;
-          }).join('')}
+    return `<li class="editable" data-criteria-index="${index}">${escapeHtml_(item)}</li>`;
+  }).join('')}
         </ul>
       </div>
     </section>
@@ -998,13 +1014,13 @@ function renderVocabularySection_(lesson, compact) {
         <div class="card">
           <ul class="compact-vocab-list">
             ${lesson.vocabulary.map(function (item, index) {
-              return `
+      return `
                 <li class="vocab-item" data-vocab-index="${index}">
                   <span class="compact-vocab-term vocab-term editable" data-vocab-field="term">${escapeHtml_(item.term)}</span>
                   <span class="editable vocab-definition" data-vocab-field="definition">: ${escapeHtml_(item.definition)}</span>
                 </li>
               `;
-            }).join('')}
+    }).join('')}
           </ul>
         </div>
       </section>
@@ -1017,13 +1033,13 @@ function renderVocabularySection_(lesson, compact) {
       <div class="card">
         <div class="vocab-grid">
           ${lesson.vocabulary.map(function (item, index) {
-            return `
+    return `
               <div class="vocab-item" data-vocab-index="${index}">
                 <div class="vocab-term editable" data-vocab-field="term">${escapeHtml_(item.term)}</div>
                 <div class="vocab-definition editable" data-vocab-field="definition">${escapeHtml_(item.definition)}</div>
               </div>
             `;
-          }).join('')}
+  }).join('')}
         </div>
       </div>
     </section>
@@ -1170,16 +1186,69 @@ function renderReviewConceptSection_(lesson) {
   `;
 }
 
-function renderQuizDirectionsSection_() {
+function renderQuizTeacherOverviewSection_(lesson) {
+  return `
+    <section>
+      <h2 class="section-title">Assessment Focus</h2>
+      <div class="quiz-focus-card">
+        <div class="quiz-focus-title">Objective</div>
+        <div class="editable quiz-focus-text objective-text" data-field="objective">${escapeHtml_(lesson.objective)}</div>
+
+        ${lesson.successCriteria && lesson.successCriteria.length ? `
+          <div class="quiz-focus-block">
+            <div class="quiz-focus-title">What This Checks</div>
+            <ul class="criteria-list">
+              ${lesson.successCriteria.map(function (item, index) {
+                return `<li class="editable" data-criteria-index="${index}">${escapeHtml_(item)}</li>`;
+              }).join('')}
+            </ul>
+          </div>
+        ` : ''}
+      </div>
+    </section>
+  `;
+}
+
+function renderQuizInfoSection_(teacherView) {
+  return `
+    <section>
+      <h2 class="section-title">${teacherView ? 'Assessment Record' : 'Student Information'}</h2>
+      <div class="quiz-info-card">
+        <div class="quiz-meta-lines">
+          <div class="quiz-line">
+            <span class="quiz-line-label">Name</span>
+            <span class="quiz-line-fill"></span>
+          </div>
+          <div class="quiz-line">
+            <span class="quiz-line-label">Date</span>
+            <span class="quiz-line-fill"></span>
+          </div>
+          <div class="quiz-line">
+            <span class="quiz-line-label">Score</span>
+            <span class="quiz-line-fill"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderQuizDirectionsSection_(teacherView, forPrint) {
+  const previewOnlyNote = (!teacherView && !forPrint)
+    ? '<li>Preview buttons are for on-screen checking only and will not appear in print.</li>'
+    : '';
+
   return `
     <section>
       <h2 class="section-title">Directions</h2>
       <div class="directions-box">
-        Read each item carefully.
+        ${teacherView
+          ? 'Use this copy as the checking and reference version of the assessment.'
+          : 'Read each item carefully and answer the questions independently.'}
         <ul class="directions-list">
           <li>Answer every question.</li>
-          <li>Show careful thinking where needed.</li>
-          <li>Check your work before submitting.</li>
+          <li>Work neatly and review your answers before submitting.</li>
+          ${previewOnlyNote}
         </ul>
       </div>
     </section>
@@ -1215,8 +1284,8 @@ function renderTeacherNotesSection_(lesson, teacherView) {
       <div class="card">
         <ul class="teacher-note-list">
           ${lesson.teacherNotes.map(function (note, index) {
-            return `<li class="editable" data-note-index="${index}">${escapeHtml_(note)}</li>`;
-          }).join('')}
+    return `<li class="editable" data-note-index="${index}">${escapeHtml_(note)}</li>`;
+  }).join('')}
         </ul>
       </div>
     </section>
