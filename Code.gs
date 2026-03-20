@@ -24,22 +24,29 @@ function doGet() {
  ***************************************/
 function getLessonStyles_() {
   return [
-    '.lesson-sheet{max-width:900px;margin:0 auto;padding:24px;}',
+    '.lesson-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px;}',
+    '.lesson-sheet{--template-accent:#0052cc;--template-accent-dark:#0f2747;--template-soft-bg:#f5f9ff;--template-soft-border:#d9e6ff;--template-subtle-bg:#fafcff;--template-subtle-border:#e5ebf5;max-width:900px;margin:0 auto;padding:24px;}',
     '.lesson-sheet.layout-compact{padding:18px;}',
     '.lesson-sheet.layout-spacious{padding:30px;}',
-    '.lesson-header{background:#ffffff;border:1px solid #dfe3eb;border-radius:18px;padding:18px;margin-bottom:14px;}',
+    '.lesson-sheet[data-template="CONCEPT"]{--template-accent:#0052cc;--template-accent-dark:#0f2747;--template-soft-bg:#f5f9ff;--template-soft-border:#d9e6ff;--template-subtle-bg:#fafcff;--template-subtle-border:#e5ebf5;}',
+    '.lesson-sheet[data-template="GUIDED_PRACTICE"]{--template-accent:#0f766e;--template-accent-dark:#134e4a;--template-soft-bg:#f0fdfa;--template-soft-border:#99f6e4;--template-subtle-bg:#f7fffd;--template-subtle-border:#c7f3eb;}',
+    '.lesson-sheet[data-template="REVIEW"]{--template-accent:#7c3aed;--template-accent-dark:#4c1d95;--template-soft-bg:#f5f3ff;--template-soft-border:#ddd6fe;--template-subtle-bg:#faf8ff;--template-subtle-border:#ece7ff;}',
+    '.lesson-sheet[data-template="QUIZ"]{--template-accent:#c2410c;--template-accent-dark:#7c2d12;--template-soft-bg:#fff7ed;--template-soft-border:#fed7aa;--template-subtle-bg:#fffaf5;--template-subtle-border:#ffedd5;}',
+    '.lesson-sheet[data-template="REMEDIATION"]{--template-accent:#be185d;--template-accent-dark:#831843;--template-soft-bg:#fff1f2;--template-soft-border:#fecdd3;--template-subtle-bg:#fff8f8;--template-subtle-border:#ffe4e6;}',
+    '.lesson-sheet[data-template="ENRICHMENT"]{--template-accent:#047857;--template-accent-dark:#064e3b;--template-soft-bg:#ecfdf5;--template-soft-border:#a7f3d0;--template-subtle-bg:#f5fffa;--template-subtle-border:#d1fae5;}',
+    '.lesson-header{background:#ffffff;border:1px solid #dfe3eb;border-top:5px solid var(--template-accent);border-radius:18px;padding:18px;margin-bottom:14px;}',
     '.lesson-sheet.layout-compact .lesson-header{padding:14px;margin-bottom:10px;}',
     '.lesson-sheet.layout-spacious .lesson-header{padding:22px;margin-bottom:18px;}',
     '.doc-banner{margin-bottom:18px;}',
-    '.school-name{font-size:15px;font-weight:700;color:#0f2747;margin-bottom:4px;}',
+    '.school-name{font-size:15px;font-weight:700;color:var(--template-accent-dark);margin-bottom:4px;}',
     '.custom-header{font-size:12px;color:#5b6b82;margin-bottom:8px;}',
-    '.eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#0052cc;margin-bottom:8px;}',
-    '.lesson-title{margin:0;font-size:28px;line-height:1.2;color:#0f2747;}',
-    '.lesson-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px;}',
+    '.eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--template-accent);margin-bottom:8px;}',
+    '.lesson-title{margin:0;font-size:28px;line-height:1.2;color:var(--template-accent-dark);}',
+    '.lesson-meta>div{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:12px;padding:12px;}',
     '.lesson-meta>div{background:#f8fbff;border:1px solid #d9e6ff;border-radius:12px;padding:12px;}',
     '.meta-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:#5b6b82;margin-bottom:4px;}',
     '.meta-value{display:block;font-size:14px;font-weight:600;color:#1c2e45;}',
-    '.section-title{font-size:18px;margin:24px 0 6px;color:#0052cc;}',
+    '.section-title{font-size:18px;margin:24px 0 6px;color:var(--template-accent);}',
     '.section-note{font-size:13px;color:#5b6b82;margin-bottom:14px;line-height:1.6;}',
     '.card{background:#ffffff;border:1px solid #dfe3eb;border-radius:16px;padding:18px;margin-bottom:14px;}',
     '.lesson-sheet.layout-compact .card{padding:14px;margin-bottom:10px;}',
@@ -47,16 +54,16 @@ function getLessonStyles_() {
     '.concept-card,.practice-card{break-inside:avoid;page-break-inside:avoid;}',
     '.concept-title{margin:0 0 8px;font-size:16px;color:#102a43;}',
     '.concept-summary{margin:0 0 12px;font-size:14px;line-height:1.7;}',
-    '.formula-box{background:#f5f9ff;border:1px solid #d9e6ff;border-radius:12px;padding:12px;margin-bottom:12px;}',
+    '.formula-box{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:12px;padding:12px;margin-bottom:12px;}',
     '.formula-label{font-size:11px;font-weight:700;text-transform:uppercase;color:#5b6b82;margin-bottom:6px;}',
     '.formula-value{font-size:15px;line-height:1.7;}',
-    '.sub-card{background:#fafcff;border:1px solid #e5ebf5;border-radius:12px;padding:12px;margin-bottom:12px;font-size:13px;line-height:1.6;}',
+    '.sub-card{background:var(--template-subtle-bg);border:1px solid var(--template-subtle-border);border-radius:12px;padding:12px;margin-bottom:12px;font-size:13px;line-height:1.6;}',
     '.sub-card-label{font-size:11px;font-weight:700;text-transform:uppercase;color:#5b6b82;margin-bottom:6px;}',
-    '.example-box{background:#f3f8ff;border:1px solid #d9e6ff;border-radius:12px;padding:12px;font-size:13px;line-height:1.7;margin-bottom:10px;}',
+    '.example-box{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:12px;padding:12px;font-size:13px;line-height:1.7;margin-bottom:10px;}',
     '.misconception-box{background:#fff8e6;border:1px solid #f2d27c;border-radius:12px;padding:12px;font-size:13px;line-height:1.6;}',
     '.criteria-list,.teacher-note-list{margin:0;padding-left:20px;line-height:1.7;}',
     '.vocab-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}',
-    '.vocab-item{background:#fafcff;border:1px solid #e5ebf5;border-radius:12px;padding:12px;}',
+    '.vocab-item{background:var(--template-subtle-bg);border:1px solid var(--template-subtle-border);border-radius:12px;padding:12px;}',
     '.vocab-term{font-weight:700;color:#102a43;margin-bottom:6px;}',
     '.vocab-definition{font-size:13px;line-height:1.6;}',
     '.practice-number{font-size:12px;font-weight:700;color:#5b6b82;text-transform:uppercase;margin-bottom:8px;}',
@@ -64,7 +71,7 @@ function getLessonStyles_() {
     '.practice-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}',
     '.practice-controls-block{display:block;width:100%;}',
     '.mc-choice-list{display:flex;flex-direction:column;gap:10px;width:100%;}',
-    '.mc-choice{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid #dfe3eb;border-radius:12px;background:#fafcff;}',
+    '.mc-choice{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--template-subtle-border);border-radius:12px;background:var(--template-subtle-bg);}',
     '.mc-letter{font-weight:700;min-width:24px;}',
     '.mc-choice-text{flex:1;line-height:1.6;}',
     '.mc-action-row{display:flex;gap:10px;margin-top:12px;}',
@@ -75,11 +82,13 @@ function getLessonStyles_() {
     '.hint-line{margin-top:6px;color:#5b6b82;}',
     '.hidden{display:none;}',
     '.objective-text,.summary-text,.concept-summary,.sub-card,.example-box,.misconception-box,.practice-question,.vocab-definition,.teacher-answer-box,.answer-reveal,.hint-line{white-space:pre-line;overflow-wrap:anywhere;word-break:break-word;}',
-    '.option-preview{margin:10px 0 12px;padding:10px 12px;background:#fafcff;border:1px solid #e5ebf5;border-radius:12px;}',
+    '.option-preview{margin:10px 0 12px;padding:10px 12px;background:var(--template-subtle-bg);border:1px solid var(--template-subtle-border);border-radius:12px;}',
     '.option-line{margin:4px 0;font-size:13px;line-height:1.5;}',
     '.print-answer-space{height:28px;border-bottom:1px solid #7a869a;margin-top:18px;}',
     '.print-answer-space.lines-2{height:56px;}',
-    '.editable.active-edit{outline:2px dashed #7aa7ff;outline-offset:2px;background:#f8fbff;cursor:text;}',
+    '.editable.active-edit{outline:2px dashed var(--template-accent);outline-offset:2px;background:var(--template-soft-bg);cursor:text;}',
+    '.lesson-sheet .btn-primary{background:var(--template-accent);color:#fff;}',
+    '.lesson-sheet .btn-light{background:var(--template-soft-bg);color:var(--template-accent-dark);border:1px solid var(--template-soft-border);}',
     '@media (max-width: 760px){.lesson-meta,.vocab-grid{grid-template-columns:1fr;}}'
   ].join('');
 }
@@ -141,18 +150,18 @@ function getPrintableLessonHtml(payload) {
   });
 
   const suggestedFilename =
-  String(request.topic || lesson.topic || 'Lesson Guide').trim() +
-  ' - ' +
-  prettyEnum_(request.templateType || lesson.templateType || 'CONCEPT');
+    String(request.topic || lesson.topic || 'Lesson Guide').trim() +
+    ' - ' +
+    prettyEnum_(request.templateType || lesson.templateType || 'CONCEPT');
 
-return {
-  filename: suggestedFilename + '.pdf',
-  html: buildPrintableDocument_(bodyHtml, {
-    layoutMode: layoutMode,
-    documentTitle: suggestedFilename,
-    footerText: '© ' + new Date().getFullYear() + ' Generated using ' + APP_TITLE + '.'
-  })
-};
+  return {
+    filename: suggestedFilename + '.pdf',
+    html: buildPrintableDocument_(bodyHtml, {
+      layoutMode: layoutMode,
+      documentTitle: suggestedFilename,
+      footerText: '© ' + new Date().getFullYear() + ' Generated using ' + APP_TITLE + '.'
+    })
+  };
 }
 
 /***************************************
@@ -283,16 +292,16 @@ function buildPrompt_(request) {
     '13. teacherNotes array',
     '',
     'Key concept rules:',
-'- Each key concept must include: heading, summary, formula, symbolMeaning, workedExample, misconception.',
-'- For non-math topics, formula may be an empty string only if no formula is appropriate.',
-'- symbolMeaning must explain symbols or important vocabulary used in the formula or concept.',
-'- workedExample must begin with a short problem or context before the steps.',
-'- For Mathematics, present workedExample in this order: Problem, Step 1, Step 2, Step 3, Answer.',
-'- Keep the Problem and Step explanations in plain readable text.',
-'- Use KaTeX only for the actual calculation line, not for every number inside the sentence.',
-'- Place each step on its own new line using the format "Step 1:", "Step 2:", and so on.',
-'- End workedExample with a final line in the format "Answer: ...".',
-'- misconception must be practical and classroom-relevant.',
+    '- Each key concept must include: heading, summary, formula, symbolMeaning, workedExample, misconception.',
+    '- For non-math topics, formula may be an empty string only if no formula is appropriate.',
+    '- symbolMeaning must explain symbols or important vocabulary used in the formula or concept.',
+    '- workedExample must begin with a short problem or context before the steps.',
+    '- For Mathematics, present workedExample in this order: Problem, Step 1, Step 2, Step 3, Answer.',
+    '- Keep the Problem and Step explanations in plain readable text.',
+    '- Use KaTeX only for the actual calculation line, not for every number inside the sentence.',
+    '- Place each step on its own new line using the format "Step 1:", "Step 2:", and so on.',
+    '- End workedExample with a final line in the format "Answer: ...".',
+    '- misconception must be practical and classroom-relevant.',
     '',
     'Practice item rules:',
     '- Create EXACTLY ' + request.itemCount + ' practice items.',
@@ -305,15 +314,15 @@ function buildPrompt_(request) {
     '- acceptedAnswers must contain at least one expected answer string.',
     '',
     'Formatting rules:',
-'- In Mathematics lessons, use display KaTeX \\[...\\] in the formula field for every formula or computation line.',
-'- In Mathematics lessons, use inline KaTeX \\(...\\) for symbolic math inside sentences, such as \\(A_{\\text{total}}\\), \\(A_1\\), \\(A_2\\), \\(x^2\\), and \\(\\frac{3}{4}\\).',
-'- Any expression with variables, subscripts, superscripts, fractions, exponents, roots, operators, or equal signs must be written in KaTeX.',
-'- Never write plain-text math notation such as A_total, A1, x2, y3, or 1/2 when mathematical notation is intended.',
-'- Keep ordinary explanatory words in plain text, but wrap every symbolic part in KaTeX.',
-'- Put each display calculation on its own line.',
-'- Use \\[...\\] for standalone calculations or important formulas.',
-'- Do not use markdown fences.',
-'- Return JSON only.',
+    '- In Mathematics lessons, use display KaTeX \\[...\\] in the formula field for every formula or computation line.',
+    '- In Mathematics lessons, use inline KaTeX \\(...\\) for symbolic math inside sentences, such as \\(A_{\\text{total}}\\), \\(A_1\\), \\(A_2\\), \\(x^2\\), and \\(\\frac{3}{4}\\).',
+    '- Any expression with variables, subscripts, superscripts, fractions, exponents, roots, operators, or equal signs must be written in KaTeX.',
+    '- Never write plain-text math notation such as A_total, A1, x2, y3, or 1/2 when mathematical notation is intended.',
+    '- Keep ordinary explanatory words in plain text, but wrap every symbolic part in KaTeX.',
+    '- Put each display calculation on its own line.',
+    '- Use \\[...\\] for standalone calculations or important formulas.',
+    '- Do not use markdown fences.',
+    '- Return JSON only.',
     '',
     'Instructional settings:',
     'Subject: ' + request.subject,
@@ -347,18 +356,18 @@ function getSubjectGuidance_(subject) {
 
   if (s.indexOf('math') !== -1) {
     return [
-  '- This is a Mathematics lesson.',
-  '- Provide 4 to 6 key concepts.',
-  '- Every key concept must include a non-empty formula in KaTeX if the topic uses a rule, property, equation, or computational relationship.',
-  '- Define all symbols clearly in symbolMeaning.',
-  '- workedExample must start with a real problem or context before showing steps.',
-  '- Use a short word problem, numerical situation, or visual interpretation prompt before the solution steps.',
-  '- workedExample must show step-by-step reasoning on separate lines.',
-'- In workedExample and symbolMeaning, every symbolic reference must use KaTeX, for example \\(A_{\\text{total}}\\), \\(A_1\\), and \\(A_2\\).',
-'- End each workedExample with a final answer line.',
-'- misconception must address a likely student error.',
-  '- Practice items should progress from recall to application when possible.'
-].join('\n');
+      '- This is a Mathematics lesson.',
+      '- Provide 4 to 6 key concepts.',
+      '- Every key concept must include a non-empty formula in KaTeX if the topic uses a rule, property, equation, or computational relationship.',
+      '- Define all symbols clearly in symbolMeaning.',
+      '- workedExample must start with a real problem or context before showing steps.',
+      '- Use a short word problem, numerical situation, or visual interpretation prompt before the solution steps.',
+      '- workedExample must show step-by-step reasoning on separate lines.',
+      '- In workedExample and symbolMeaning, every symbolic reference must use KaTeX, for example \\(A_{\\text{total}}\\), \\(A_1\\), and \\(A_2\\).',
+      '- End each workedExample with a final answer line.',
+      '- misconception must address a likely student error.',
+      '- Practice items should progress from recall to application when possible.'
+    ].join('\n');
   }
 
   if (s.indexOf('science') !== -1) {
@@ -575,11 +584,11 @@ function sanitizeRequest_(formData) {
   if (!cleaned.topic) throw new Error('Topic is required.');
 
   if (['STUDENT', 'TEACHER'].indexOf(cleaned.previewMode) === -1) cleaned.previewMode = 'STUDENT';
-if (['COMPACT', 'STANDARD', 'SPACIOUS'].indexOf(cleaned.layoutMode) === -1) cleaned.layoutMode = DEFAULT_LAYOUT_MODE;
-if (['CONCEPT', 'GUIDED_PRACTICE', 'REVIEW', 'QUIZ', 'REMEDIATION', 'ENRICHMENT'].indexOf(cleaned.templateType) === -1) cleaned.templateType = DEFAULT_TEMPLATE;
-if (['BELOW_LEVEL', 'ON_LEVEL', 'ABOVE_LEVEL'].indexOf(cleaned.difficulty) === -1) cleaned.difficulty = 'ON_LEVEL';
+  if (['COMPACT', 'STANDARD', 'SPACIOUS'].indexOf(cleaned.layoutMode) === -1) cleaned.layoutMode = DEFAULT_LAYOUT_MODE;
+  if (['CONCEPT', 'GUIDED_PRACTICE', 'REVIEW', 'QUIZ', 'REMEDIATION', 'ENRICHMENT'].indexOf(cleaned.templateType) === -1) cleaned.templateType = DEFAULT_TEMPLATE;
+  if (['BELOW_LEVEL', 'ON_LEVEL', 'ABOVE_LEVEL'].indexOf(cleaned.difficulty) === -1) cleaned.difficulty = 'ON_LEVEL';
 
-return cleaned;
+  return cleaned;
 }
 
 function normalizeLesson_(lesson, fallbackRequest) {
@@ -614,17 +623,17 @@ function normalizeLesson_(lesson, fallbackRequest) {
     }),
     lessonSummary: normalizeDisplayText_(base.lessonSummary || ''),
     keyConcepts: keyConcepts.map(function (item) {
-  return {
-    heading: String((item && item.heading) || '').trim(),
-    summary: normalizeDisplayText_((item && item.summary) || ''),
-    formula: String((item && item.formula) || '').trim(),
-    symbolMeaning: normalizeDisplayText_((item && item.symbolMeaning) || ''),
-    workedExample: normalizeDisplayText_((item && item.workedExample) || ''),
-    misconception: normalizeDisplayText_((item && item.misconception) || '')
-  };
-}).filter(function (item) {
-  return item.heading && item.summary && item.workedExample;
-}),
+      return {
+        heading: String((item && item.heading) || '').trim(),
+        summary: normalizeDisplayText_((item && item.summary) || ''),
+        formula: String((item && item.formula) || '').trim(),
+        symbolMeaning: normalizeDisplayText_((item && item.symbolMeaning) || ''),
+        workedExample: normalizeDisplayText_((item && item.workedExample) || ''),
+        misconception: normalizeDisplayText_((item && item.misconception) || '')
+      };
+    }).filter(function (item) {
+      return item.heading && item.summary && item.workedExample;
+    }),
     practiceItems: practiceItems.map(function (item) {
       const type = normalizeItemType_(item && item.type);
       let options = Array.isArray(item && item.options) ? item.options : [];
@@ -687,20 +696,20 @@ function validateLesson_(lesson, request) {
   }
 
   lesson.keyConcepts.forEach(function (item, index) {
-  if (!item.heading || !item.summary || !item.workedExample) {
-    throw new Error('Key concept ' + (index + 1) + ' is incomplete.');
-  }
-
-  if (isMathSubject_(lesson.subject) && !item.formula) {
-    throw new Error('Math key concept ' + (index + 1) + ' must include a formula.');
-  }
-
-  if (isMathSubject_(lesson.subject) && item.formula) {
-    if (!/\\\[.*\\\]|\\\(.*\\\)/.test(item.formula)) {
-      throw new Error('Math key concept ' + (index + 1) + ' formula must use KaTeX delimiters.');
+    if (!item.heading || !item.summary || !item.workedExample) {
+      throw new Error('Key concept ' + (index + 1) + ' is incomplete.');
     }
-  }
-});
+
+    if (isMathSubject_(lesson.subject) && !item.formula) {
+      throw new Error('Math key concept ' + (index + 1) + ' must include a formula.');
+    }
+
+    if (isMathSubject_(lesson.subject) && item.formula) {
+      if (!/\\\[.*\\\]|\\\(.*\\\)/.test(item.formula)) {
+        throw new Error('Math key concept ' + (index + 1) + ' formula must use KaTeX delimiters.');
+      }
+    }
+  });
 
   lesson.practiceItems.forEach(function (item, index) {
     if (!item.question) throw new Error('Practice item ' + (index + 1) + ' has no question.');
@@ -832,8 +841,8 @@ function renderLessonHtml_(lesson, options) {
       <div class="card">
         <ul class="criteria-list">
           ${lesson.successCriteria.map(function (item, index) {
-            return `<li class="editable" data-criteria-index="${index}">${escapeHtml_(item)}</li>`;
-          }).join('')}
+    return `<li class="editable" data-criteria-index="${index}">${escapeHtml_(item)}</li>`;
+  }).join('')}
         </ul>
       </div>
     </section>
@@ -845,13 +854,13 @@ function renderLessonHtml_(lesson, options) {
       <div class="card">
         <div class="vocab-grid">
           ${lesson.vocabulary.map(function (item, index) {
-            return `
+    return `
               <div class="vocab-item" data-vocab-index="${index}">
                 <div class="vocab-term editable" data-vocab-field="term">${escapeHtml_(item.term)}</div>
                 <div class="vocab-definition editable" data-vocab-field="definition">${escapeHtml_(item.definition)}</div>
               </div>
             `;
-          }).join('')}
+  }).join('')}
         </div>
       </div>
     </section>
@@ -905,17 +914,18 @@ function renderLessonHtml_(lesson, options) {
       <div class="card">
         <ul class="teacher-note-list">
           ${lesson.teacherNotes.map(function (note, index) {
-            return `<li class="editable" data-note-index="${index}">${escapeHtml_(note)}</li>`;
-          }).join('')}
+    return `<li class="editable" data-note-index="${index}">${escapeHtml_(note)}</li>`;
+  }).join('')}
         </ul>
       </div>
     </section>
   ` : '';
 
   const lessonSheetClass = 'lesson-sheet layout-' + layoutMode.toLowerCase();
+  const templateType = String(lesson.templateType || DEFAULT_TEMPLATE).toUpperCase();
 
   return `
-    <div class="${lessonSheetClass}" data-copy-mode="${copyMode}">
+      <div class="${lessonSheetClass}" data-copy-mode="${copyMode}" data-template="${escapeHtml_(templateType)}">
       ${topHeaderHtml}
       ${objectiveHtml}
       ${successCriteriaHtml}
@@ -932,8 +942,8 @@ function renderLessonHtml_(lesson, options) {
         <h2 class="section-title">Individual Practice</h2>
         <div class="section-note">
           ${teacherView
-            ? 'Teacher view shows accepted answers and hints.'
-            : 'Answer all items. Use the interactive buttons for immediate checking.'}
+      ? 'Teacher view shows accepted answers and hints.'
+      : 'Answer all items. Use the interactive buttons for immediate checking.'}
         </div>
         ${practiceHtml}
       </section>
@@ -984,8 +994,8 @@ function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
     controlsHtml = forPrint ? `
       <div class="option-preview">
         ${item.options.map(function (opt, i) {
-          return `<div class="option-line"><strong>${String.fromCharCode(65 + i)}.</strong> ${escapeHtml_(opt)}</div>`;
-        }).join('')}
+      return `<div class="option-line"><strong>${String.fromCharCode(65 + i)}.</strong> ${escapeHtml_(opt)}</div>`;
+    }).join('')}
       </div>
       <div class="print-answer-space"></div>
     ` : `
@@ -1028,15 +1038,15 @@ function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
       ${controlsHtml}
       ${forPrint ? '' : `<div id="feedback_${index}" class="feedback"></div>`}
       ${teacherView
-        ? `<div class="teacher-answer-box">
+      ? `<div class="teacher-answer-box">
             <strong>Accepted answer(s):</strong> <span class="editable" data-practice-field="answers">${escapeHtml_(answerText)}</span>
             ${item.hint ? `<div class="hint-line"><strong>Hint:</strong> <span class="editable" data-practice-field="hint">${escapeHtml_(item.hint)}</span></div>` : ''}
           </div>`
-        : `<div id="answer_${index}" class="answer-reveal hidden">
+      : `<div id="answer_${index}" class="answer-reveal hidden">
             <strong>Accepted answer(s):</strong> ${escapeHtml_(answerText)}
             ${item.hint ? `<div class="hint-line"><strong>Hint:</strong> ${escapeHtml_(item.hint)}</div>` : ''}
           </div>`
-      }
+    }
     </article>
   `;
 }
@@ -1130,7 +1140,10 @@ function getPrintStyles_() {
     'body.print-mode .meta-value{font-size:12px;}',
     'body.print-mode .concept-summary, body.print-mode .practice-question, body.print-mode .vocab-definition, body.print-mode .teacher-answer-box, body.print-mode .answer-reveal, body.print-mode .sub-card, body.print-mode .example-box, body.print-mode .misconception-box, body.print-mode .objective-text, body.print-mode .summary-text{font-size:12px;line-height:1.45;white-space:pre-line;overflow-wrap:anywhere;word-break:break-word;}',
     'body.print-mode .formula-value{font-size:13px;line-height:1.4;}',
-    'body.print-mode .lesson-meta{grid-template-columns:repeat(auto-fit,minmax(1.7in,1fr));gap:8px;}',
+    'body.print-mode .lesson-meta{display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:6px !important;}',
+    'body.print-mode .lesson-meta>div{padding:8px 10px;border-radius:10px;}',
+    'body.print-mode .meta-label{font-size:9px;line-height:1.1;margin-bottom:2px;}',
+    'body.print-mode .meta-value{font-size:11px;line-height:1.2;}',
     'body.print-mode .vocab-grid{grid-template-columns:repeat(auto-fit,minmax(2in,1fr));gap:8px;}',
     'body.print-mode .btn, body.print-mode .feedback, body.print-mode .answer-reveal.hidden{display:none !important;}',
     'body.print-mode .practice-controls{display:block;}',
