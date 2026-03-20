@@ -86,6 +86,21 @@ function getLessonStyles_() {
     '.compact-vocab-list li{margin-bottom:8px;}',
     '.compact-vocab-term{font-weight:700;color:#102a43;}',
     '.review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}',
+    '.review-focus-strip{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:14px;padding:14px 16px;margin-bottom:14px;}',
+    '.review-focus-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--template-accent-dark);margin-bottom:6px;}',
+    '.review-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}',
+    '.review-mini-card{background:#fff;border:1px solid var(--template-subtle-border);border-radius:14px;padding:14px;box-shadow:none;}',
+    '.review-mini-title{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--template-accent-dark);margin-bottom:8px;}',
+    '.review-rule-box{background:var(--template-subtle-bg);border:1px solid var(--template-subtle-border);border-radius:10px;padding:10px 12px;margin:8px 0 10px;}',
+    '.review-reminder-box{background:#fff;border:1px dashed var(--template-soft-border);border-radius:10px;padding:10px 12px;margin-top:8px;}',
+    '.lesson-sheet[data-template="REVIEW"] .compact-vocab-list{columns:2;column-gap:24px;padding-left:18px;}',
+    '.lesson-sheet[data-template="REVIEW"] .compact-vocab-list li{break-inside:avoid;margin-bottom:8px;}',
+    '.lesson-sheet[data-template="REVIEW"] .quick-review-card{background:#fff;border:1px solid var(--template-subtle-border);padding:14px;box-shadow:none;}',
+    '.lesson-sheet[data-template="REVIEW"] .quick-review-card .concept-summary{font-size:13px;line-height:1.6;margin-bottom:8px;}',
+    '.lesson-sheet[data-template="REVIEW"] .quick-review-card .misconception-box{margin-top:8px;padding:10px 12px;}',
+    '.lesson-sheet[data-template="REVIEW"] .practice-section .section-title{letter-spacing:.04em;}',
+    '.lesson-sheet[data-template="REVIEW"] .practice-card{background:#fff;border:1px solid var(--template-soft-border);box-shadow:none;}',
+    '.lesson-sheet[data-template="REVIEW"] .practice-card .practice-question{font-size:14px;line-height:1.65;}',
     '.guided-practice-card,.quick-review-card{break-inside:avoid;page-break-inside:avoid;}',
     '.mini-formula-box{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:12px;padding:10px 12px;margin:10px 0 12px;}',
     '.mini-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#5b6b82;margin-bottom:4px;}',
@@ -131,7 +146,7 @@ function getLessonStyles_() {
     '.editable.active-edit{outline:2px dashed var(--template-accent);outline-offset:2px;background:var(--template-soft-bg);cursor:text;}',
     '.lesson-sheet .btn-primary{background:var(--template-accent);color:#fff;}',
     '.lesson-sheet .btn-light{background:var(--template-soft-bg);color:var(--template-accent-dark);border:1px solid var(--template-soft-border);}',
-    '@media (max-width: 760px){.lesson-meta,.vocab-grid,.review-grid,.quiz-meta-lines{grid-template-columns:1fr;}}'
+    '@media (max-width: 760px){.lesson-meta,.vocab-grid,.review-grid,.quiz-meta-lines,.guided-stage-grid,.review-list{grid-template-columns:1fr;}.lesson-sheet[data-template="REVIEW"] .compact-vocab-list{columns:1;}}'
   ].join('');
 }
 
@@ -1045,13 +1060,13 @@ function renderReviewTemplate_(lesson, teacherView, forPrint) {
     renderObjectiveSection_(lesson),
     renderSuccessCriteriaSection_(lesson),
     renderVocabularySection_(lesson, true),
-    renderSummarySection_(lesson, 'Quick Review'),
+    renderReviewFocusSection_(lesson),
     renderReviewConceptSection_(lesson),
     renderPracticeSection_(lesson, teacherView, forPrint, {
-      title: 'Mixed Review',
+      title: 'MIXED REVIEW',
       note: teacherView
         ? 'Teacher copy shows accepted answers and hints for quick checking.'
-        : 'Use these items to review key ideas and check recall.'
+        : 'Use these items to review the key ideas and check your recall.'
     }),
     renderTeacherNotesSection_(lesson, teacherView)
   ].join('');
@@ -1242,22 +1257,36 @@ function renderGuidedPracticeConceptSection_(lesson) {
   `;
 }
 
+function renderReviewFocusSection_(lesson) {
+  return `
+    <section>
+      <h2 class="section-title">REVIEW AT A GLANCE</h2>
+      <div class="review-focus-strip">
+        <div class="review-focus-title">Quick Focus</div>
+        <div class="editable summary-text" data-field="lessonSummary">${escapeHtml_(lesson.lessonSummary)}</div>
+      </div>
+    </section>
+  `;
+}
+
 function renderReviewConceptSection_(lesson) {
   const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
-      <article class="card quick-review-card" data-concept-index="${index}">
+      <article class="review-mini-card quick-review-card" data-concept-index="${index}">
+        <div class="review-mini-title">QUICK REMINDER</div>
         <h3 class="concept-title editable" data-concept-field="heading">${escapeHtml_(item.heading)}</h3>
+
         <div class="concept-summary editable" data-concept-field="summary">${escapeHtml_(item.summary)}</div>
 
         ${item.formula ? `
-          <div class="mini-formula-box">
+          <div class="review-rule-box">
             <div class="mini-label">Formula / Rule</div>
             <div class="formula-value formula-text" data-concept-field="formula">${escapeHtml_(item.formula)}</div>
           </div>
         ` : ''}
 
-        <div class="sub-card">
-          <div class="sub-card-label">Key Reminder</div>
+        <div class="review-reminder-box">
+          <div class="sub-card-label">Remember This</div>
           <div class="editable compact-note" data-concept-field="symbolMeaning">${escapeHtml_(item.symbolMeaning)}</div>
         </div>
 
@@ -1273,9 +1302,9 @@ function renderReviewConceptSection_(lesson) {
 
   return `
     <section>
-      <h2 class="section-title">Review Snapshot</h2>
-      <div class="section-note">Use these compact reminders to recall the main ideas before answering the review items.</div>
-      <div class="review-grid">
+      <h2 class="section-title">QUICK REMINDERS</h2>
+      <div class="section-note">Scan these reminders first, then answer the review items.</div>
+      <div class="review-list">
         ${conceptsHtml}
       </div>
     </section>
@@ -1558,9 +1587,30 @@ function getPrintStyles_() {
     'body.print-mode .meta-label{font-size:9px;line-height:1.1;margin-bottom:2px;}',
     'body.print-mode .meta-value{font-size:11px;line-height:1.2;}',
     'body.print-mode .vocab-grid{grid-template-columns:repeat(auto-fit,minmax(2in,1fr));gap:8px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .section-title{margin:10px 0 4px;font-size:14px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .section-note{font-size:11px;line-height:1.35;margin-bottom:6px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .review-focus-strip{padding:10px 12px;margin-bottom:10px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .review-focus-title{font-size:10px;margin-bottom:4px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .compact-vocab-list{columns:2;column-gap:18px;padding-left:16px;line-height:1.45;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .compact-vocab-list li{margin-bottom:6px;break-inside:avoid;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .review-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .review-mini-card, body.print-mode .lesson-sheet[data-template="REVIEW"] .quick-review-card{padding:10px 12px;margin-bottom:0;break-inside:avoid;page-break-inside:avoid;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .review-mini-title{font-size:10px;margin-bottom:6px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .concept-title{font-size:14px;line-height:1.25;margin:0 0 6px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .concept-summary{font-size:11px;line-height:1.4;margin-bottom:6px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .review-rule-box{padding:8px 10px;margin:6px 0 8px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .review-reminder-box{padding:8px 10px;margin-top:6px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .misconception-box{padding:8px 10px;margin-top:6px;font-size:11px;line-height:1.35;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .practice-card{padding:10px 12px;margin-bottom:8px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .practice-number{font-size:10px;margin-bottom:6px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .practice-question{font-size:12px;line-height:1.45;margin-bottom:8px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .option-preview{padding:8px 10px;margin:8px 0 10px;}',
+    'body.print-mode .lesson-sheet[data-template="REVIEW"] .print-answer-space{margin-top:12px;}',
     'body.print-mode .btn, body.print-mode .feedback, body.print-mode .answer-reveal.hidden{display:none !important;}',
     'body.print-mode .practice-controls{display:block;}',
     'body.print-mode .answer-input{display:block;width:100%;border:1px solid #999;min-width:0;}',
+   '@media print and (max-width: 700px){body.print-mode .lesson-sheet[data-template="REVIEW"] .review-list{grid-template-columns:1fr;}body.print-mode .lesson-sheet[data-template="REVIEW"] .compact-vocab-list{columns:1;}}', 
+    'body.print-mode .btn, body.print-mode .feedback, body.print-mode .answer-reveal.hidden{display:none !important;}',
     'body.print-mode .concept-card, body.print-mode .practice-card{break-inside:auto;page-break-inside:auto;}',
     'body.print-mode .formula-box, body.print-mode .sub-card, body.print-mode .example-box, body.print-mode .misconception-box{break-inside:avoid;page-break-inside:avoid;}',
     'body.print-mode .editable.active-edit{outline:none;background:transparent;}',
