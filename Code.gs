@@ -151,6 +151,12 @@ function getLessonStyles_() {
     '.feedback{margin-top:10px;min-height:22px;font-size:13px;font-weight:700;}',
     '.answer-reveal{margin-top:10px;padding:10px 12px;border-radius:10px;background:#fff8e6;border:1px solid #f2d27c;font-size:13px;line-height:1.5;}',
     '.teacher-answer-box{margin-top:10px;padding:10px 12px;border-radius:10px;background:#f9fbfe;border:1px dashed #b8c7db;font-size:13px;line-height:1.6;}',
+    '.answer-key-list{display:flex;flex-direction:column;gap:10px;}',
+    '.answer-key-item{background:#f9fbfe;border:1px dashed #b8c7db;border-radius:12px;padding:12px;}',
+    '.answer-key-number{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#5b6b82;margin-bottom:6px;}',
+    '.answer-key-question{font-size:13px;line-height:1.55;margin-bottom:6px;}',
+    '.answer-key-response{font-size:13px;line-height:1.55;}',
+    '.answer-key-hint{margin-top:6px;color:#5b6b82;}',
     '.hint-line{margin-top:6px;color:#5b6b82;}',
     '.hidden{display:none;}',
     '.objective-text,.summary-text,.concept-summary,.sub-card,.example-box,.misconception-box,.practice-question,.vocab-definition,.teacher-answer-box,.answer-reveal,.hint-line{white-space:pre-line;overflow-wrap:anywhere;word-break:break-word;}',
@@ -421,8 +427,8 @@ function buildPrompt_(request) {
     difficultyGuidance,
     '',
     'Practice design guidance:',
-practiceDesignGuidance,
-'',
+    practiceDesignGuidance,
+    '',
     'Quality expectations:',
     '- lessonSummary must be genuinely useful for classroom instruction and must fit the selected template.',
     '- successCriteria must be student-friendly and measurable.',
@@ -1220,6 +1226,7 @@ function renderLessonHtml_(lesson, options) {
     <div class="${lessonSheetClass}" data-copy-mode="${copyMode}" data-template="${escapeHtml_(templateType)}">
       ${topHeaderHtml}
       ${bodyHtml}
+      ${renderAnswerKeySection_(lesson, teacherView)}
     </div>
   `;
 }
@@ -1958,6 +1965,36 @@ function renderTeacherNotesSection_(lesson, teacherView) {
   `;
 }
 
+
+function renderAnswerKeySection_(lesson, teacherView) {
+  if (!teacherView || !lesson.practiceItems || !lesson.practiceItems.length) return '';
+
+  const answerKeyHtml = lesson.practiceItems.map(function (item, index) {
+    const answers = (item.acceptedAnswers || []).join(' | ');
+
+    return `
+      <article class="answer-key-item">
+        <div class="answer-key-number">Item ${index + 1}</div>
+        <div class="answer-key-question">${escapeHtml_(item.question || '')}</div>
+        <div class="answer-key-response">
+          <strong>Accepted answer(s):</strong> ${escapeHtml_(answers)}
+        </div>
+        ${item.hint ? `<div class="answer-key-hint"><strong>Hint:</strong> ${escapeHtml_(item.hint)}</div>` : ''}
+      </article>
+    `;
+  }).join('');
+
+  return `
+    <section>
+      <h2 class="section-title">Answer Key</h2>
+      <div class="section-note">Use this section for quick checking and reference across all practice items.</div>
+      <div class="answer-key-list">
+        ${answerKeyHtml}
+      </div>
+    </section>
+  `;
+}
+
 function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
   const answerText = item.acceptedAnswers.join(' | ');
   let controlsHtml = '';
@@ -2154,6 +2191,14 @@ function getPrintStyles_() {
     'body.print-mode .btn, body.print-mode .feedback, body.print-mode .answer-reveal.hidden{display:none !important;}',
     'body.print-mode .concept-card, body.print-mode .practice-card{break-inside:auto;page-break-inside:auto;}',
     'body.print-mode .formula-box, body.print-mode .sub-card, body.print-mode .example-box, body.print-mode .misconception-box{break-inside:avoid;page-break-inside:avoid;}',
+    'body.print-mode .answer-key-list{gap:8px;}',
+    'body.print-mode .answer-key-item{padding:10px 12px;border-radius:10px;break-inside:avoid;page-break-inside:avoid;}',
+    'body.print-mode .answer-key-number{font-size:10px;margin-bottom:4px;}',
+    'body.print-mode .answer-key-question{font-size:12px;line-height:1.4;margin-bottom:4px;}',
+    'body.print-mode .answer-key-response{font-size:12px;line-height:1.4;}',
+    'body.print-mode .answer-key-hint{font-size:11px;line-height:1.35;margin-top:4px;}',
+    '@media print and (max-width: 700px){body.print-mode .lesson-sheet[data-copy-mode="TEACHER"] .answer-key-list{grid-template-columns:1fr;}}',
+    'body.print-mode .lesson-sheet[data-copy-mode="TEACHER"] .answer-key-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}',
     'body.print-mode .editable.active-edit{outline:none;background:transparent;}',
     'body.print-mode .pdf-footnote{display:block !important;margin-top:0.35in;padding-top:10px;text-align:center;font-size:10px;line-height:1.2;color:#666;border-top:1px solid #ddd;break-inside:avoid;page-break-inside:avoid;}'
   ].join('');
