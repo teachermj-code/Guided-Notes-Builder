@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
   <base target="_top">
   <meta charset="utf-8">
@@ -40,56 +39,41 @@
       padding: 0 20px;
     }
 
-.hero {
-  background: linear-gradient(180deg, #EAF8FF 0%, #D9F0FB 100%);
-  color: #12324A;
-  border: 1px solid #C7E3F0;
-  border-radius: 22px;
-  padding: 28px 28px;
-  box-shadow: 0 8px 20px rgba(18, 50, 74, 0.08);
-}
+    .hero {
+      background: linear-gradient(180deg, #eaf8ff 0%, #d9f0fb 100%);
+      color: #12324a;
+      border: 1px solid #c7e3f0;
+      border-radius: 22px;
+      padding: 28px;
+      box-shadow: 0 8px 20px rgba(18, 50, 74, 0.08);
+    }
 
-.hero-main {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-}
+    .hero-main {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+    }
 
-.hero-centered {
-  text-align: center;
-}
+    .hero-centered {
+      text-align: center;
+    }
 
-.hero h1 {
-  margin: 0;
-  font-size: clamp(36px, 4.6vw, 52px);
-  line-height: 1.05;
-  letter-spacing: 0.03em;
-  font-weight: 800;
-  color: #12324A;
-}
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(36px, 4.6vw, 52px);
+      line-height: 1.05;
+      letter-spacing: 0.03em;
+      font-weight: 800;
+      color: #12324a;
+    }
 
-.hero p {
-  margin: 10px 0 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #4F6B80;
-  letter-spacing: 0.015em;
-}
-
-@media (max-width: 760px) {
-  .hero {
-    padding: 20px 18px;
-  }
-
-  .hero h1 {
-    font-size: 30px;
-    letter-spacing: 0.025em;
-  }
-
-  .hero p {
-    font-size: 12px;
-  }
-}
+    .hero p {
+      margin: 10px 0 0;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #4f6b80;
+      letter-spacing: 0.015em;
+    }
 
     .grid {
       display: grid;
@@ -161,6 +145,76 @@
       box-shadow: 0 6px 18px rgba(15, 39, 71, 0.05);
     }
 
+    .preview-toolbar-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .toolbar-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-left: auto;
+      justify-content: flex-end;
+    }
+
+    .preview-toolbar-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      flex-wrap: wrap;
+      width: 100%;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #e8edf6;
+    }
+
+    .preview-selects {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .preview-field {
+      min-width: 180px;
+    }
+
+    .preview-field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .preview-field select {
+      width: 100%;
+      border: 1px solid #c8d1dc;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .preview-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
     .placeholder {
       display: grid;
       place-items: center;
@@ -187,7 +241,7 @@
       font-weight: 700;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: .04em;
+      letter-spacing: 0.04em;
     }
 
     .field input,
@@ -241,6 +295,10 @@
       margin-top: 16px;
     }
 
+    .input-actions {
+      justify-content: flex-start;
+    }
+
     .btn {
       border: 1px solid transparent;
       border-radius: 12px;
@@ -249,7 +307,7 @@
       font-size: 14px;
       font-weight: 700;
       cursor: pointer;
-      transition: all .18s ease;
+      transition: all 0.18s ease;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -267,7 +325,7 @@
     }
 
     .btn:disabled {
-      opacity: .55;
+      opacity: 0.55;
       cursor: not-allowed;
       box-shadow: none;
       transform: none;
@@ -276,7 +334,7 @@
     .btn-primary {
       background: #0052cc;
       color: #fff;
-      box-shadow: 0 6px 16px rgba(0, 82, 204, .18);
+      box-shadow: 0 6px 16px rgba(0, 82, 204, 0.18);
     }
 
     .btn-primary:hover:not(:disabled) {
@@ -297,7 +355,7 @@
     .btn-secondary-strong {
       background: #0f2747;
       color: #fff;
-      box-shadow: 0 6px 16px rgba(15, 39, 71, .16);
+      box-shadow: 0 6px 16px rgba(15, 39, 71, 0.16);
     }
 
     .btn-secondary-strong:hover:not(:disabled) {
@@ -318,99 +376,7 @@
       background: #e8f1ff;
       color: #0052cc;
       border-color: #bcd3ff;
-      box-shadow: 0 4px 12px rgba(0, 82, 204, .10);
-    }
-
-    .preview-shell {
-      min-height: 720px;
-    }
-
-    .preview-toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 14px;
-      padding-bottom: 14px;
-      border-bottom: 1px solid var(--line);
-    }
-
-   .toolbar-group {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-left: auto;
-  justify-content: flex-end;
-}
-
-    .input-actions {
-      justify-content: flex-start;
-    }
-
-    .preview-toolbar-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 14px;
-  flex-wrap: wrap;
-  width: 100%;
-}
-.preview-toolbar-top .toolbar-group {
-  margin-left: auto;
-  justify-content: flex-end;
-}
-
-    .preview-toolbar-controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-top: 14px;
-      padding-top: 14px;
-      border-top: 1px solid #e8edf6;
-    }
-
-    .preview-selects {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: flex-end;
-    }
-
-    .preview-field {
-      min-width: 180px;
-    }
-
-    .preview-field label {
-      display: block;
-      margin-bottom: 6px;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .04em;
-    }
-
-    .preview-field select {
-      width: 100%;
-      border: 1px solid #c8d1dc;
-      border-radius: 12px;
-      padding: 12px 14px;
-      font-size: 14px;
-      outline: none;
-      background: #fff;
-      color: var(--text);
-    }
-
-    .preview-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      align-items: center;
+      box-shadow: 0 4px 12px rgba(0, 82, 204, 0.1);
     }
 
     .status {
@@ -436,19 +402,6 @@
       font-weight: 700;
     }
 
-    .placeholder {
-      display: grid;
-      place-items: center;
-      min-height: 580px;
-      text-align: center;
-      color: var(--muted);
-      border: 2px dashed #d7dfeb;
-      border-radius: 18px;
-      padding: 24px;
-      background: #fbfcff;
-      line-height: 1.7;
-    }
-
     .mini-badge {
       display: inline-flex;
       align-items: center;
@@ -461,44 +414,6 @@
       font-weight: 700;
     }
 
-    @media (max-width: 1080px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 760px) {
-      .checkbox-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .preview-toolbar-top {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .preview-toolbar-controls {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .preview-selects {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .preview-field {
-        min-width: 0;
-      }
-
-      .preview-actions {
-        justify-content: flex-start;
-      }
-    }
-
-    <?!=getLessonStyles_() ?>
-
-    /* Minimalist empty state styling */
     .empty-state-minimal {
       display: flex;
       flex-direction: column;
@@ -529,17 +444,67 @@
       max-width: 420px;
       line-height: 1.6;
     }
+
+    @media (max-width: 1080px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .hero {
+        padding: 20px 18px;
+      }
+
+      .hero h1 {
+        font-size: 30px;
+        letter-spacing: 0.025em;
+      }
+
+      .hero p {
+        font-size: 12px;
+      }
+
+      .checkbox-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-toolbar-top {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .preview-toolbar-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .preview-selects {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .preview-field {
+        min-width: 0;
+      }
+
+      .preview-actions {
+        justify-content: flex-start;
+      }
+    }
+
+    <?!= getLessonStyles_() ?>
   </style>
 </head>
 
 <body>
   <div class="shell">
     <div class="hero">
-  <div class="hero-main hero-centered">
-    <h1>LESSON GUIDE BUILDER</h1>
-    <p>Developed by Teacher MJ © <?!= getCurrentYear_() ?></p>
-  </div>
-</div>
+      <div class="hero-main hero-centered">
+        <h1>LESSON GUIDE BUILDER</h1>
+        <p>Developed by Teacher MJ © <?!= getCurrentYear_() ?></p>
+      </div>
+    </div>
 
     <div class="grid">
       <div class="panel">
@@ -610,7 +575,6 @@
           </div>
         </div>
 
-
         <div class="panel-section">
           <div class="section-heading">Header and Footer</div>
 
@@ -648,8 +612,7 @@
           <div class="preview-toolbar-top">
             <div>
               <div class="preview-title">Preview & Export</div>
-              <div class="help-note">Adjust the view, edit the generated lesson, reveal answers, and export student or
-                teacher copies.</div>
+              <div class="help-note">Adjust the view, edit the generated lesson, reveal answers, and export student or teacher copies.</div>
             </div>
             <div class="toolbar-group">
               <span class="mini-badge" id="modeBadge">Student Copy</span>
@@ -678,7 +641,7 @@
 
             <div class="preview-actions">
               <button id="editBtn" class="btn btn-neutral" onclick="toggleEditMode()" disabled>Edit Preview</button>
-              <button class="btn btn-neutral" onclick="showAllAnswers()" id="showAnswersBtn" disabled>Show Answers</button>
+              <button id="showAnswersBtn" class="btn btn-neutral" onclick="showAllAnswers()" disabled>Show Answers</button>
               <button id="printStudentBtn" class="btn btn-secondary-strong" onclick="printLesson('STUDENT')" disabled>Export Student PDF</button>
               <button id="printTeacherBtn" class="btn btn-alt" onclick="printLesson('TEACHER')" disabled>Export Teacher PDF</button>
             </div>
@@ -700,6 +663,15 @@
     let currentRequest = null;
     let editMode = false;
     let hasManualEdits = false;
+
+    function getEmptyStateHtml() {
+      return `
+        <div class="empty-state-minimal">
+          <div class="empty-icon-minimal">✦</div>
+          <p>Select your lesson parameters on the left and click <strong>Generate Lesson</strong>.</p>
+        </div>
+      `;
+    }
 
     function renderMathInPreview() {
       const output = document.getElementById('outputView');
@@ -768,6 +740,19 @@
       };
     }
 
+    function setOutputView(html, isPlaceholder) {
+      const output = document.getElementById('outputView');
+      output.className = isPlaceholder ? 'placeholder' : '';
+      output.innerHTML = html;
+    }
+
+    function syncAndLockEdits() {
+      if (hasManualEdits) {
+        syncPreviewEditsToLesson();
+      }
+      disableEditMode(true);
+    }
+
     function buildLesson() {
       const data = getFormData();
 
@@ -778,31 +763,32 @@
 
       disableEditMode(true);
       setBusy(true, 'Generating lesson guide...');
-      document.getElementById('outputView').className = 'placeholder';
-      document.getElementById('outputView').innerHTML = 'Generating structured lesson content...';
+      setOutputView('Generating structured lesson content...', true);
 
       google.script.run
         .withSuccessHandler(function (res) {
           currentLesson = res.lesson;
           currentRequest = res.request || data;
           hasManualEdits = false;
-          document.getElementById('outputView').className = '';
-          document.getElementById('outputView').innerHTML = res.html;
+
+          setOutputView(res.html, false);
           renderMathInPreview();
-                    updateEditButtonState();
+          updateEditButtonState();
           updatePreviewChrome();
+
           document.getElementById('editBtn').disabled = false;
           document.getElementById('printStudentBtn').disabled = false;
           document.getElementById('printTeacherBtn').disabled = false;
           document.getElementById('showAnswersBtn').disabled = false;
+
           setBusy(false);
           setStatus('Lesson guide generated successfully.', 'success');
         })
         .withFailureHandler(function (err) {
           currentLesson = null;
           currentRequest = null;
-          document.getElementById('outputView').className = 'placeholder';
-          document.getElementById('outputView').innerHTML = 'Generation failed. Check your Script Properties and try again.';
+
+          setOutputView('Generation failed. Check your Script Properties and try again.', true);
           setBusy(false);
           document.getElementById('showAnswersBtn').disabled = true;
           setStatus(err && err.message ? err.message : 'An unexpected error occurred.', 'error');
@@ -816,17 +802,13 @@
         return;
       }
 
-      if (hasManualEdits) {
-  syncPreviewEditsToLesson();
-}
-disableEditMode(true);
+      syncAndLockEdits();
       currentRequest = getFormData();
       setStatus('Rendering selected preview mode...', '');
 
       google.script.run
         .withSuccessHandler(function (res) {
-          document.getElementById('outputView').className = '';
-          document.getElementById('outputView').innerHTML = res.html;
+          setOutputView(res.html, false);
           renderMathInPreview();
           hasManualEdits = false;
           updatePreviewChrome();
@@ -847,7 +829,8 @@ disableEditMode(true);
       const mode = document.getElementById('previewMode').value;
       document.getElementById('modeBadge').textContent = mode === 'TEACHER' ? 'Teacher Copy' : 'Student Copy';
     }
-        function updateEditButtonState() {
+
+    function updateEditButtonState() {
       const btn = document.getElementById('editBtn');
       if (!btn) return;
 
@@ -898,6 +881,7 @@ disableEditMode(true);
         setStatus('Editing disabled.', '');
       }
     }
+
     document.addEventListener('input', function (evt) {
       if (evt.target && evt.target.classList && evt.target.classList.contains('editable')) {
         hasManualEdits = true;
@@ -936,15 +920,14 @@ disableEditMode(true);
       currentLesson.lessonSummary = textOf('[data-field="lessonSummary"]') || currentLesson.lessonSummary;
 
       const quarter = textOf('[data-field="quarter"]');
-const teacherName = textOf('[data-field="teacherName"]');
-
-document.getElementById('quarter').value = quarter || '';
-document.getElementById('teacherName').value = teacherName || '';
-
+      const teacherName = textOf('[data-field="teacherName"]');
       const schoolName = textOf('[data-field="schoolName"]');
       const customHeader = textOf('[data-field="customHeader"]');
-      if (schoolName) document.getElementById('schoolName').value = schoolName;
-      if (customHeader) document.getElementById('customHeader').value = customHeader;
+
+      document.getElementById('quarter').value = quarter || '';
+      document.getElementById('teacherName').value = teacherName || '';
+      document.getElementById('schoolName').value = schoolName || '';
+      document.getElementById('customHeader').value = customHeader || '';
 
       const criteria = [];
       root.querySelectorAll('[data-criteria-index]').forEach(function (el) {
@@ -957,7 +940,9 @@ document.getElementById('teacherName').value = teacherName || '';
       root.querySelectorAll('[data-vocab-index]').forEach(function (card) {
         const term = textOf('[data-vocab-field="term"]', card);
         const definition = textOf('[data-vocab-field="definition"]', card);
-        if (term && definition) vocab.push({ term: term, definition: definition });
+        if (term && definition) {
+          vocab.push({ term: term, definition: definition });
+        }
       });
       if (vocab.length) currentLesson.vocabulary = vocab;
 
@@ -980,11 +965,14 @@ document.getElementById('teacherName').value = teacherName || '';
         const original = currentLesson.practiceItems[index] || {};
         const answersText = textOf('[data-practice-field="answers"]', card);
         const hintText = textOf('[data-practice-field="hint"]', card);
+
         practiceItems.push({
           type: original.type || 'short-answer',
           question: textOf('[data-practice-field="question"]', card) || original.question || '',
           options: original.options || [],
-          acceptedAnswers: answersText ? answersText.split('|').map(function (s) { return s.trim(); }).filter(Boolean) : (original.acceptedAnswers || []),
+          acceptedAnswers: answersText
+            ? answersText.split('|').map(function (s) { return s.trim(); }).filter(Boolean)
+            : (original.acceptedAnswers || []),
           hint: hintText || original.hint || ''
         });
       });
@@ -1051,12 +1039,14 @@ document.getElementById('teacherName').value = teacherName || '';
 
     function showAllAnswers() {
       const mode = document.getElementById('previewMode').value;
+
       if (mode === 'TEACHER') {
         setStatus('Teacher copy already shows the accepted answers and hints.', '');
         return;
       }
 
       if (!currentLesson || !currentLesson.practiceItems) return;
+
       currentLesson.practiceItems.forEach(function (_, index) {
         showAnswer(index);
       });
@@ -1068,10 +1058,7 @@ document.getElementById('teacherName').value = teacherName || '';
         return;
       }
 
-      if (hasManualEdits) {
-  syncPreviewEditsToLesson();
-}
-disableEditMode(true);
+      syncAndLockEdits();
 
       const printWindow = window.open('', '_blank');
       if (!printWindow) {
@@ -1131,15 +1118,9 @@ disableEditMode(true);
       document.getElementById('printTeacherBtn').disabled = true;
       document.getElementById('editBtn').disabled = true;
       document.getElementById('showAnswersBtn').disabled = true;
-      updateEditButtonState();
-      document.getElementById('outputView').className = 'placeholder';
-      document.getElementById('outputView').innerHTML = `
-  <div class="empty-state-minimal">
-    <div class="empty-icon-minimal">✦</div>
-    <p>Select your lesson parameters on the left and click <strong>Generate Lesson</strong>.</p>
-  </div>
-`;
 
+      updateEditButtonState();
+      setOutputView(getEmptyStateHtml(), true);
       updatePreviewChrome();
       setStatus('', '');
     }
@@ -1147,5 +1128,4 @@ disableEditMode(true);
     updatePreviewChrome();
   </script>
 </body>
-
 </html>
