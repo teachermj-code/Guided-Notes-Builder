@@ -66,6 +66,16 @@ function getLessonStyles_() {
     '.vocab-item{background:var(--template-subtle-bg);border:1px solid var(--template-subtle-border);border-radius:12px;padding:12px;}',
     '.vocab-term{font-weight:700;color:#102a43;margin-bottom:6px;}',
     '.vocab-definition{font-size:13px;line-height:1.6;}',
+    '.compact-vocab-list{margin:0;padding-left:20px;line-height:1.7;}',
+    '.compact-vocab-list li{margin-bottom:8px;}',
+    '.compact-vocab-term{font-weight:700;color:#102a43;}',
+    '.review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}',
+    '.guided-practice-card,.quick-review-card{break-inside:avoid;page-break-inside:avoid;}',
+    '.mini-formula-box{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:12px;padding:10px 12px;margin:10px 0 12px;}',
+    '.mini-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#5b6b82;margin-bottom:4px;}',
+    '.compact-note{font-size:13px;line-height:1.6;}',
+    '.directions-box{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:14px;padding:14px 16px;line-height:1.7;font-size:13px;margin-bottom:14px;}',
+    '.directions-list{margin:8px 0 0;padding-left:20px;}',
     '.practice-number{font-size:12px;font-weight:700;color:#5b6b82;text-transform:uppercase;margin-bottom:8px;}',
     '.practice-question{font-size:14px;line-height:1.7;margin-bottom:12px;}',
     '.practice-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}',
@@ -89,7 +99,7 @@ function getLessonStyles_() {
     '.editable.active-edit{outline:2px dashed var(--template-accent);outline-offset:2px;background:var(--template-soft-bg);cursor:text;}',
     '.lesson-sheet .btn-primary{background:var(--template-accent);color:#fff;}',
     '.lesson-sheet .btn-light{background:var(--template-soft-bg);color:var(--template-accent-dark);border:1px solid var(--template-soft-border);}',
-    '@media (max-width: 760px){.lesson-meta,.vocab-grid{grid-template-columns:1fr;}}'
+    '@media (max-width: 760px){.lesson-meta,.vocab-grid,.review-grid{grid-template-columns:1fr;}}'
   ].join('');
 }
 
@@ -824,9 +834,134 @@ function renderLessonHtml_(lesson, options) {
   const teacherView = copyMode === 'TEACHER';
   const layoutMode = String(opts.layoutMode || DEFAULT_LAYOUT_MODE).toUpperCase();
   const headerInfo = opts.headerInfo || {};
+  const templateType = String(lesson.templateType || DEFAULT_TEMPLATE).toUpperCase();
 
   const topHeaderHtml = renderTopHeaderHtml_(lesson, teacherView, headerInfo);
-  const objectiveHtml = `
+  const lessonSheetClass = 'lesson-sheet layout-' + layoutMode.toLowerCase();
+  const bodyHtml = renderTemplateBody_(lesson, {
+    teacherView: teacherView,
+    forPrint: forPrint,
+    templateType: templateType
+  });
+
+  return `
+    <div class="${lessonSheetClass}" data-copy-mode="${copyMode}" data-template="${escapeHtml_(templateType)}">
+      ${topHeaderHtml}
+      ${bodyHtml}
+    </div>
+  `;
+}
+
+function renderTopHeaderHtml_(lesson, teacherView, headerInfo) {
+  return `
+    <header class="lesson-header">
+      <div class="doc-banner">
+        ${headerInfo.schoolName ? `<div class="school-name editable" data-field="schoolName">${escapeHtml_(headerInfo.schoolName)}</div>` : ''}
+        ${headerInfo.customHeader ? `<div class="custom-header editable" data-field="customHeader">${escapeHtml_(headerInfo.customHeader)}</div>` : ''}
+      </div>
+      <div class="eyebrow">${teacherView ? 'Teacher Copy' : 'Student Copy'}</div>
+      <h1 class="lesson-title editable" data-field="title">${escapeHtml_(lesson.title)}</h1>
+      <div class="lesson-meta">
+        <div><span class="meta-label">Subject</span><span class="meta-value editable" data-field="subject">${escapeHtml_(lesson.subject)}</span></div>
+        <div><span class="meta-label">Grade Level</span><span class="meta-value editable" data-field="gradeLevel">${escapeHtml_(lesson.gradeLevel)}</span></div>
+        <div><span class="meta-label">Topic</span><span class="meta-value editable" data-field="topic">${escapeHtml_(lesson.topic)}</span></div>
+        <div><span class="meta-label">Template</span><span class="meta-value">${escapeHtml_(prettyEnum_(lesson.templateType))}</span></div>
+        <div><span class="meta-label">Difficulty</span><span class="meta-value">${escapeHtml_(prettyEnum_(lesson.difficulty))}</span></div>
+        <div><span class="meta-label">Quarter</span><span class="meta-value editable" data-field="quarter">${escapeHtml_(headerInfo.quarter || '')}</span></div>
+<div><span class="meta-label">Teacher Name</span><span class="meta-value editable" data-field="teacherName">${escapeHtml_(headerInfo.teacherName || '')}</span></div>
+      </div>
+    </header>
+  `;
+}
+
+function renderTemplateBody_(lesson, options) {
+  const opts = options || {};
+  const teacherView = !!opts.teacherView;
+  const forPrint = !!opts.forPrint;
+  const templateType = String(opts.templateType || lesson.templateType || DEFAULT_TEMPLATE).toUpperCase();
+
+  if (templateType === 'QUIZ') {
+    return renderQuizTemplate_(lesson, teacherView, forPrint);
+  }
+
+  if (templateType === 'GUIDED_PRACTICE') {
+    return renderGuidedPracticeTemplate_(lesson, teacherView, forPrint);
+  }
+
+  if (templateType === 'REVIEW') {
+    return renderReviewTemplate_(lesson, teacherView, forPrint);
+  }
+
+  return renderConceptTemplate_(lesson, teacherView, forPrint);
+}
+
+function renderConceptTemplate_(lesson, teacherView, forPrint) {
+  return [
+    renderObjectiveSection_(lesson),
+    renderSuccessCriteriaSection_(lesson),
+    renderVocabularySection_(lesson, false),
+    renderSummarySection_(lesson, 'Lesson Overview'),
+    renderFullConceptSection_(lesson),
+    renderPracticeSection_(lesson, teacherView, forPrint, {
+      title: 'Individual Practice',
+      note: teacherView
+        ? 'Teacher view shows accepted answers and hints.'
+        : 'Answer all items. Use the interactive buttons for immediate checking.'
+    }),
+    renderTeacherNotesSection_(lesson, teacherView)
+  ].join('');
+}
+
+function renderGuidedPracticeTemplate_(lesson, teacherView, forPrint) {
+  return [
+    renderObjectiveSection_(lesson),
+    renderSuccessCriteriaSection_(lesson),
+    renderVocabularySection_(lesson, true),
+    renderSummarySection_(lesson, 'Lesson Focus'),
+    renderGuidedPracticeConceptSection_(lesson),
+    renderPracticeSection_(lesson, teacherView, forPrint, {
+      title: 'Now Try On Your Own',
+      note: teacherView
+        ? 'Teacher copy shows accepted answers and hints after the guided examples.'
+        : 'Work through the guided learning, then complete the items independently.'
+    }),
+    renderTeacherNotesSection_(lesson, teacherView)
+  ].join('');
+}
+
+function renderReviewTemplate_(lesson, teacherView, forPrint) {
+  return [
+    renderObjectiveSection_(lesson),
+    renderSuccessCriteriaSection_(lesson),
+    renderVocabularySection_(lesson, true),
+    renderSummarySection_(lesson, 'Quick Review'),
+    renderReviewConceptSection_(lesson),
+    renderPracticeSection_(lesson, teacherView, forPrint, {
+      title: 'Mixed Review',
+      note: teacherView
+        ? 'Teacher copy shows accepted answers and hints for quick checking.'
+        : 'Use these items to review key ideas and check recall.'
+    }),
+    renderTeacherNotesSection_(lesson, teacherView)
+  ].join('');
+}
+
+function renderQuizTemplate_(lesson, teacherView, forPrint) {
+  return [
+    teacherView ? renderObjectiveSection_(lesson) : '',
+    renderQuizDirectionsSection_(),
+    renderPracticeSection_(lesson, teacherView, forPrint, {
+      title: 'Assessment Items',
+      note: teacherView
+        ? 'Teacher copy includes accepted answers and hints.'
+        : 'Read each item carefully and answer each question independently.'
+    }),
+    renderTeacherNotesSection_(lesson, teacherView)
+  ].join('');
+}
+
+function renderObjectiveSection_(lesson) {
+  return `
     <section>
       <h2 class="section-title">Objective</h2>
       <div class="card">
@@ -834,47 +969,81 @@ function renderLessonHtml_(lesson, options) {
       </div>
     </section>
   `;
+}
 
-  const successCriteriaHtml = lesson.successCriteria && lesson.successCriteria.length ? `
+function renderSuccessCriteriaSection_(lesson) {
+  if (!lesson.successCriteria || !lesson.successCriteria.length) return '';
+
+  return `
     <section>
       <h2 class="section-title">Success Criteria</h2>
       <div class="card">
         <ul class="criteria-list">
           ${lesson.successCriteria.map(function (item, index) {
-    return `<li class="editable" data-criteria-index="${index}">${escapeHtml_(item)}</li>`;
-  }).join('')}
+            return `<li class="editable" data-criteria-index="${index}">${escapeHtml_(item)}</li>`;
+          }).join('')}
         </ul>
       </div>
     </section>
-  ` : '';
+  `;
+}
 
-  const vocabularyHtml = lesson.vocabulary && lesson.vocabulary.length ? `
+function renderVocabularySection_(lesson, compact) {
+  if (!lesson.vocabulary || !lesson.vocabulary.length) return '';
+
+  if (compact) {
+    return `
+      <section>
+        <h2 class="section-title">Vocabulary</h2>
+        <div class="card">
+          <ul class="compact-vocab-list">
+            ${lesson.vocabulary.map(function (item, index) {
+              return `
+                <li class="vocab-item" data-vocab-index="${index}">
+                  <span class="compact-vocab-term vocab-term editable" data-vocab-field="term">${escapeHtml_(item.term)}</span>
+                  <span class="editable vocab-definition" data-vocab-field="definition">: ${escapeHtml_(item.definition)}</span>
+                </li>
+              `;
+            }).join('')}
+          </ul>
+        </div>
+      </section>
+    `;
+  }
+
+  return `
     <section>
       <h2 class="section-title">Vocabulary</h2>
       <div class="card">
         <div class="vocab-grid">
           ${lesson.vocabulary.map(function (item, index) {
-    return `
+            return `
               <div class="vocab-item" data-vocab-index="${index}">
                 <div class="vocab-term editable" data-vocab-field="term">${escapeHtml_(item.term)}</div>
                 <div class="vocab-definition editable" data-vocab-field="definition">${escapeHtml_(item.definition)}</div>
               </div>
             `;
-  }).join('')}
+          }).join('')}
         </div>
       </div>
     </section>
-  ` : '';
+  `;
+}
 
-  const summaryHtml = `
+function renderSummarySection_(lesson, title) {
+  if (!lesson.lessonSummary) return '';
+
+  return `
     <section>
-      <h2 class="section-title">Lesson Overview</h2>
+      <h2 class="section-title">${escapeHtml_(title || 'Lesson Overview')}</h2>
       <div class="card">
         <div class="section-note editable summary-text" data-field="lessonSummary">${escapeHtml_(lesson.lessonSummary)}</div>
       </div>
     </section>
   `;
+}
 
+function renderFullConceptSection_(lesson) {
   const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
       <article class="card concept-card" data-concept-index="${index}">
@@ -904,74 +1073,153 @@ function renderLessonHtml_(lesson, options) {
     `;
   }).join('');
 
+  return `
+    <section>
+      <h2 class="section-title">Key Concepts</h2>
+      <div class="section-note">Use these explanations and examples for direct instruction.</div>
+      ${conceptsHtml}
+    </section>
+  `;
+}
+
+function renderGuidedPracticeConceptSection_(lesson) {
+  const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
+    return `
+      <article class="card concept-card guided-practice-card" data-concept-index="${index}">
+        <div class="practice-number">Concept ${index + 1}</div>
+        <h3 class="concept-title editable" data-concept-field="heading">${escapeHtml_(item.heading)}</h3>
+
+        <div class="sub-card">
+          <div class="sub-card-label">Teach It</div>
+          <div class="concept-summary editable" data-concept-field="summary">${escapeHtml_(item.summary)}</div>
+        </div>
+
+        ${item.formula ? `
+          <div class="formula-box">
+            <div class="formula-label">Useful Formula / Rule</div>
+            <div class="formula-value formula-text" data-concept-field="formula">${escapeHtml_(item.formula)}</div>
+          </div>
+        ` : ''}
+
+        <div class="sub-card">
+          <div class="sub-card-label">Key Terms and Symbols</div>
+          <div class="editable compact-note" data-concept-field="symbolMeaning">${escapeHtml_(item.symbolMeaning)}</div>
+        </div>
+
+        <div class="example-box">
+          <strong>Try It Together:</strong>
+          <div class="editable" data-concept-field="workedExample">${escapeHtml_(item.workedExample)}</div>
+        </div>
+
+        ${item.misconception ? `
+          <div class="misconception-box">
+            <strong>Watch Out:</strong>
+            <div class="editable" data-concept-field="misconception">${escapeHtml_(item.misconception)}</div>
+          </div>
+        ` : ''}
+      </article>
+    `;
+  }).join('');
+
+  return `
+    <section>
+      <h2 class="section-title">Guided Learning</h2>
+      <div class="section-note">Move from explanation to supported example before asking students to work independently.</div>
+      ${conceptsHtml}
+    </section>
+  `;
+}
+
+function renderReviewConceptSection_(lesson) {
+  const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
+    return `
+      <article class="card quick-review-card" data-concept-index="${index}">
+        <h3 class="concept-title editable" data-concept-field="heading">${escapeHtml_(item.heading)}</h3>
+        <div class="concept-summary editable" data-concept-field="summary">${escapeHtml_(item.summary)}</div>
+
+        ${item.formula ? `
+          <div class="mini-formula-box">
+            <div class="mini-label">Formula / Rule</div>
+            <div class="formula-value formula-text" data-concept-field="formula">${escapeHtml_(item.formula)}</div>
+          </div>
+        ` : ''}
+
+        <div class="sub-card">
+          <div class="sub-card-label">Key Reminder</div>
+          <div class="editable compact-note" data-concept-field="symbolMeaning">${escapeHtml_(item.symbolMeaning)}</div>
+        </div>
+
+        ${item.misconception ? `
+          <div class="misconception-box">
+            <strong>Common Error:</strong>
+            <div class="editable" data-concept-field="misconception">${escapeHtml_(item.misconception)}</div>
+          </div>
+        ` : ''}
+      </article>
+    `;
+  }).join('');
+
+  return `
+    <section>
+      <h2 class="section-title">Review Snapshot</h2>
+      <div class="section-note">Use these compact reminders to recall the main ideas before answering the review items.</div>
+      <div class="review-grid">
+        ${conceptsHtml}
+      </div>
+    </section>
+  `;
+}
+
+function renderQuizDirectionsSection_() {
+  return `
+    <section>
+      <h2 class="section-title">Directions</h2>
+      <div class="directions-box">
+        Read each item carefully.
+        <ul class="directions-list">
+          <li>Answer every question.</li>
+          <li>Show careful thinking where needed.</li>
+          <li>Check your work before submitting.</li>
+        </ul>
+      </div>
+    </section>
+  `;
+}
+
+function renderPracticeSection_(lesson, teacherView, forPrint, config) {
+  const cfg = config || {};
+  const title = cfg.title || 'Individual Practice';
+  const note = cfg.note || (teacherView
+    ? 'Teacher view shows accepted answers and hints.'
+    : 'Answer all items. Use the interactive buttons for immediate checking.');
+
   const practiceHtml = lesson.practiceItems.map(function (item, index) {
     return renderPracticeItemHtml_(item, index, teacherView, forPrint);
   }).join('');
 
-  const teacherNotesHtml = teacherView ? `
+  return `
+    <section class="practice-section">
+      <h2 class="section-title">${escapeHtml_(title)}</h2>
+      <div class="section-note">${escapeHtml_(note)}</div>
+      ${practiceHtml}
+    </section>
+  `;
+}
+
+function renderTeacherNotesSection_(lesson, teacherView) {
+  if (!teacherView || !lesson.teacherNotes || !lesson.teacherNotes.length) return '';
+
+  return `
     <section>
       <h2 class="section-title">Teacher Notes</h2>
       <div class="card">
         <ul class="teacher-note-list">
           ${lesson.teacherNotes.map(function (note, index) {
-    return `<li class="editable" data-note-index="${index}">${escapeHtml_(note)}</li>`;
-  }).join('')}
+            return `<li class="editable" data-note-index="${index}">${escapeHtml_(note)}</li>`;
+          }).join('')}
         </ul>
       </div>
     </section>
-  ` : '';
-
-  const lessonSheetClass = 'lesson-sheet layout-' + layoutMode.toLowerCase();
-  const templateType = String(lesson.templateType || DEFAULT_TEMPLATE).toUpperCase();
-
-  return `
-      <div class="${lessonSheetClass}" data-copy-mode="${copyMode}" data-template="${escapeHtml_(templateType)}">
-      ${topHeaderHtml}
-      ${objectiveHtml}
-      ${successCriteriaHtml}
-      ${vocabularyHtml}
-      ${summaryHtml}
-
-      <section>
-        <h2 class="section-title">Key Concepts</h2>
-        <div class="section-note">Use these explanations and examples for direct instruction.</div>
-        ${conceptsHtml}
-      </section>
-
-      <section class="practice-section">
-        <h2 class="section-title">Individual Practice</h2>
-        <div class="section-note">
-          ${teacherView
-      ? 'Teacher view shows accepted answers and hints.'
-      : 'Answer all items. Use the interactive buttons for immediate checking.'}
-        </div>
-        ${practiceHtml}
-      </section>
-
-      ${teacherNotesHtml}
-    </div>
-  `;
-}
-
-function renderTopHeaderHtml_(lesson, teacherView, headerInfo) {
-  return `
-    <header class="lesson-header">
-      <div class="doc-banner">
-        ${headerInfo.schoolName ? `<div class="school-name editable" data-field="schoolName">${escapeHtml_(headerInfo.schoolName)}</div>` : ''}
-        ${headerInfo.customHeader ? `<div class="custom-header editable" data-field="customHeader">${escapeHtml_(headerInfo.customHeader)}</div>` : ''}
-      </div>
-      <div class="eyebrow">${teacherView ? 'Teacher Copy' : 'Student Copy'}</div>
-      <h1 class="lesson-title editable" data-field="title">${escapeHtml_(lesson.title)}</h1>
-      <div class="lesson-meta">
-        <div><span class="meta-label">Subject</span><span class="meta-value editable" data-field="subject">${escapeHtml_(lesson.subject)}</span></div>
-        <div><span class="meta-label">Grade Level</span><span class="meta-value editable" data-field="gradeLevel">${escapeHtml_(lesson.gradeLevel)}</span></div>
-        <div><span class="meta-label">Topic</span><span class="meta-value editable" data-field="topic">${escapeHtml_(lesson.topic)}</span></div>
-        <div><span class="meta-label">Template</span><span class="meta-value">${escapeHtml_(prettyEnum_(lesson.templateType))}</span></div>
-        <div><span class="meta-label">Difficulty</span><span class="meta-value">${escapeHtml_(prettyEnum_(lesson.difficulty))}</span></div>
-        <div><span class="meta-label">Quarter</span><span class="meta-value editable" data-field="quarter">${escapeHtml_(headerInfo.quarter || '')}</span></div>
-<div><span class="meta-label">Teacher Name</span><span class="meta-value editable" data-field="teacherName">${escapeHtml_(headerInfo.teacherName || '')}</span></div>
-      </div>
-    </header>
   `;
 }
 
