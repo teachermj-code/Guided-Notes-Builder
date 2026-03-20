@@ -268,6 +268,69 @@
       align-items:center;
     }
 
+        .input-actions{
+      justify-content:flex-start;
+    }
+
+    .preview-toolbar-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+    .preview-toolbar-controls{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:16px;
+      flex-wrap:wrap;
+      margin-top:14px;
+      padding-top:14px;
+      border-top:1px solid #e8edf6;
+    }
+
+    .preview-selects{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:flex-end;
+    }
+
+    .preview-field{
+      min-width:180px;
+    }
+
+    .preview-field label{
+      display:block;
+      margin-bottom:6px;
+      font-size:12px;
+      font-weight:700;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+
+    .preview-field select{
+      width:100%;
+      border:1px solid #c8d1dc;
+      border-radius:12px;
+      padding:12px 14px;
+      font-size:14px;
+      outline:none;
+      background:#fff;
+      color:var(--text);
+    }
+
+    .preview-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:center;
+    }
+
     .status{
       font-size:13px;
       color:var(--muted);
@@ -309,8 +372,31 @@
       .grid{ grid-template-columns:1fr; }
     }
 
-    @media (max-width: 760px){
+        @media (max-width: 760px){
       .checkbox-grid{ grid-template-columns:1fr; }
+
+      .preview-toolbar-top{
+        flex-direction:column;
+        align-items:stretch;
+      }
+
+      .preview-toolbar-controls{
+        flex-direction:column;
+        align-items:stretch;
+      }
+
+      .preview-selects{
+        flex-direction:column;
+        align-items:stretch;
+      }
+
+      .preview-field{
+        min-width:0;
+      }
+
+      .preview-actions{
+        justify-content:flex-start;
+      }
     }
 
     <?!= getLessonStyles_() ?>
@@ -362,7 +448,7 @@
 
     <div class="grid">
       <div class="panel">
-        <h2>Lesson Inputs</h2>
+        <h2>Lesson Setup</h2>
 
         <div class="panel-section">
           <div class="section-heading">Core Details</div>
@@ -429,27 +515,7 @@
           </div>
         </div>
 
-        <div class="panel-section">
-          <div class="section-heading">Layout and Print</div>
-
-          <div class="field">
-            <label for="previewMode">Preview Mode</label>
-            <select id="previewMode" onchange="rerenderPreviewMode()">
-              <option value="STUDENT" selected>Student Copy</option>
-              <option value="TEACHER">Teacher Copy</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="layoutMode">Layout Density</label>
-            <select id="layoutMode" onchange="rerenderPreviewMode()">
-              <option value="COMPACT">Compact</option>
-              <option value="STANDARD" selected>Standard</option>
-              <option value="SPACIOUS">Spacious</option>
-            </select>
-          </div>
-        </div>
-
+      
         <div class="panel-section">
           <div class="section-heading">Header and Footer</div>
 
@@ -474,29 +540,52 @@
           </div>
         </div>
 
-        <div class="actions">
+                <div class="actions input-actions">
           <button id="generateBtn" class="btn btn-primary" onclick="buildLesson()">Generate Lesson</button>
           <button class="btn btn-secondary" onclick="resetForm()">Reset</button>
-          <button id="editBtn" class="btn btn-secondary" onclick="toggleEditMode()" disabled>Enable Editing</button>
-        </div>
-
-        <div class="secondary-actions">
-          <button id="printStudentBtn" class="btn btn-dark" onclick="printLesson('STUDENT')" disabled>Print / Save Student PDF</button>
-          <button id="printTeacherBtn" class="btn btn-warning" onclick="printLesson('TEACHER')" disabled>Print / Save Teacher PDF</button>
         </div>
 
         <div id="status" class="status"></div>
       </div>
 
       <div class="preview-shell">
-        <div class="preview-toolbar">
-          <div>
-            <div class="preview-title">Lesson Preview</div>
-            <div class="help-note">Preview can be edited. Print uses the structured lesson data plus your synced text edits.</div>
+                <div class="preview-toolbar">
+          <div class="preview-toolbar-top">
+            <div>
+              <div class="preview-title">Preview & Export</div>
+              <div class="help-note">Adjust the view, edit the generated lesson, reveal answers, and export student or teacher copies.</div>
+            </div>
+            <div class="toolbar-group">
+              <span class="mini-badge" id="modeBadge">Student Copy</span>
+            </div>
           </div>
-          <div class="toolbar-group">
-            <span class="mini-badge" id="modeBadge">Student Copy</span>
-            <button class="btn btn-secondary" onclick="showAllAnswers()" id="showAnswersBtn" disabled>Show Answers</button>
+
+          <div class="preview-toolbar-controls">
+            <div class="preview-selects">
+              <div class="preview-field">
+                <label for="previewMode">Preview Mode</label>
+                <select id="previewMode" onchange="rerenderPreviewMode()">
+                  <option value="STUDENT" selected>Student Copy</option>
+                  <option value="TEACHER">Teacher Copy</option>
+                </select>
+              </div>
+
+              <div class="preview-field">
+                <label for="layoutMode">Layout Density</label>
+                <select id="layoutMode" onchange="rerenderPreviewMode()">
+                  <option value="COMPACT">Compact</option>
+                  <option value="STANDARD" selected>Standard</option>
+                  <option value="SPACIOUS">Spacious</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="preview-actions">
+              <button id="editBtn" class="btn btn-secondary" onclick="toggleEditMode()" disabled>Enable Editing</button>
+              <button class="btn btn-secondary" onclick="showAllAnswers()" id="showAnswersBtn" disabled>Show Answers</button>
+              <button id="printStudentBtn" class="btn btn-dark" onclick="printLesson('STUDENT')" disabled>Print / Save Student PDF</button>
+              <button id="printTeacherBtn" class="btn btn-warning" onclick="printLesson('TEACHER')" disabled>Print / Save Teacher PDF</button>
+            </div>
           </div>
         </div>
 
