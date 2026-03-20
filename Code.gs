@@ -24,6 +24,22 @@ function doGet() {
  ***************************************/
 function getLessonStyles_() {
   return [
+    '.practice-number{font-size:12px;font-weight:700;color:#5b6b82;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}',
+    '.guided-summary-box{background:var(--template-subtle-bg);border:1px solid var(--template-subtle-border);border-radius:12px;padding:10px 12px;}',
+    '.guided-symbol-box{background:#ffffff;border:1px dashed var(--template-soft-border);border-radius:12px;padding:10px 12px;margin-top:10px;}',
+    '.guided-focus-strip{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:14px;padding:14px 16px;margin-bottom:14px;}',
+    '.lesson-sheet[data-template="GUIDED_PRACTICE"] .guided-learn-card{background:#fff;border:1px solid var(--template-subtle-border);box-shadow:none;}',
+    '.lesson-sheet[data-template="GUIDED_PRACTICE"] .guided-learn-card .guided-summary-box{background:transparent;border:1px solid var(--template-subtle-border);padding:10px 12px;}',
+    '.lesson-sheet[data-template="GUIDED_PRACTICE"] .guided-learn-card .guided-symbol-box{background:#fff;border:1px dashed var(--template-subtle-border);padding:10px 12px;}',
+    '.lesson-sheet[data-template="GUIDED_PRACTICE"] .guided-learn-card .misconception-box{margin-top:10px;}',
+    '.lesson-sheet[data-template="GUIDED_PRACTICE"] .guided-example-card{background:#fff;border:1px solid var(--template-soft-border);border-left:5px solid var(--template-accent);box-shadow:none;}',
+    '.lesson-sheet[data-template="GUIDED_PRACTICE"] .practice-section{margin-top:8px;}',
+    '.lesson-sheet[data-template="GUIDED_PRACTICE"] .practice-section .section-title{font-size:22px;letter-spacing:.06em;}',
+    '.lesson-sheet[data-template="GUIDED_PRACTICE"] .practice-section .section-note{color:var(--template-accent-dark);font-weight:600;}',
+    '.lesson-sheet[data-template="GUIDED_PRACTICE"] .practice-card{background:#fff;border:1px solid var(--template-soft-border);border-left:5px solid var(--template-accent);border-radius:16px;box-shadow:0 8px 18px rgba(15,39,71,.08);}',
+    '.lesson-sheet[data-template="GUIDED_PRACTICE"] .practice-card .practice-number{color:var(--template-accent-dark);letter-spacing:.08em;}',
+    '.lesson-sheet[data-template="GUIDED_PRACTICE"] .practice-card .practice-question{font-size:15px;line-height:1.75;}',
+    '.lesson-sheet[data-template="GUIDED_PRACTICE"] .practice-card .teacher-answer-box{background:var(--template-soft-bg);border:1px dashed var(--template-soft-border);}',
     '.guided-example-title{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--template-accent-dark);margin-bottom:12px;}',
     '.lesson-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px;}',
     '.lesson-sheet{--template-accent:#0052cc;--template-accent-dark:#0f2747;--template-soft-bg:#f5f9ff;--template-soft-border:#d9e6ff;--template-subtle-bg:#fafcff;--template-subtle-border:#e5ebf5;max-width:900px;margin:0 auto;padding:24px;}',
@@ -52,7 +68,7 @@ function getLessonStyles_() {
     '.lesson-sheet.layout-compact .card{padding:14px;margin-bottom:10px;}',
     '.lesson-sheet.layout-spacious .card{padding:22px;margin-bottom:18px;}',
     '.concept-card,.practice-card{break-inside:avoid;page-break-inside:avoid;}',
-  '.concept-title{margin:0 0 10px;font-size:16px;color:#102a43;line-height:1.35;}',
+    '.concept-title{margin:0 0 10px;font-size:16px;color:#102a43;line-height:1.35;}',
     '.concept-summary{margin:0 0 12px;font-size:14px;line-height:1.7;}',
     '.formula-box{background:var(--template-soft-bg);border:1px solid var(--template-soft-border);border-radius:12px;padding:12px;margin-bottom:12px;}',
     '.formula-label{font-size:11px;font-weight:700;text-transform:uppercase;color:#5b6b82;margin-bottom:6px;}',
@@ -1279,8 +1295,8 @@ function renderQuizTeacherOverviewSection_(lesson) {
             <div class="quiz-focus-title">What This Checks</div>
             <ul class="criteria-list">
               ${lesson.successCriteria.map(function (item, index) {
-                return `<li class="editable" data-criteria-index="${index}">${escapeHtml_(item)}</li>`;
-              }).join('')}
+    return `<li class="editable" data-criteria-index="${index}">${escapeHtml_(item)}</li>`;
+  }).join('')}
             </ul>
           </div>
         ` : ''}
@@ -1323,8 +1339,8 @@ function renderQuizDirectionsSection_(teacherView, forPrint) {
       <h2 class="section-title">Directions</h2>
       <div class="directions-box">
         ${teacherView
-          ? 'Use this copy as the checking and reference version of the assessment.'
-          : 'Read each item carefully and answer the questions independently.'}
+      ? 'Use this copy as the checking and reference version of the assessment.'
+      : 'Read each item carefully and answer the questions independently.'}
         <ul class="directions-list">
           <li>Answer every question.</li>
           <li>Work neatly and review your answers before submitting.</li>
