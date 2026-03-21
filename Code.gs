@@ -1250,56 +1250,52 @@ function renderLessonHtml_(lesson, options) {
 }
 
 function renderTopHeaderHtml_(lesson, teacherView, headerInfo, forPrint) {
-  if (forPrint) {
-    return `
-      <header class="lesson-header print-lesson-header">
-        <div class="doc-banner">
-          ${headerInfo.schoolName ? `<div class="school-name">${escapeHtml_(headerInfo.schoolName)}</div>` : ''}
-          ${headerInfo.customHeader ? `<div class="custom-header">${escapeHtml_(headerInfo.customHeader)}</div>` : ''}
+if (forPrint) {
+  return `
+    <header class="lesson-header print-lesson-header">
+      <div class="doc-banner">
+        ${headerInfo.schoolName ? `<div class="school-name">${escapeHtml_(headerInfo.schoolName)}</div>` : ''}
+        ${headerInfo.customHeader ? `<div class="custom-header">${escapeHtml_(headerInfo.customHeader)}</div>` : ''}
+      </div>
+
+      <div class="eyebrow">${teacherView ? 'Teacher Copy' : 'Student Copy'}</div>
+      <h1 class="lesson-title">${escapeHtml_(lesson.title)}</h1>
+
+      <div class="print-meta-grid">
+        <div class="meta-card">
+          <div class="meta-label">Subject</div>
+          <div class="meta-value">${escapeHtml_(lesson.subject)}</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">Grade Level</div>
+          <div class="meta-value">${escapeHtml_(lesson.gradeLevel)}</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">Topic</div>
+          <div class="meta-value">${escapeHtml_(lesson.topic)}</div>
         </div>
 
-        <div class="eyebrow">${teacherView ? 'Teacher Copy' : 'Student Copy'}</div>
-        <h1 class="lesson-title">${escapeHtml_(lesson.title)}</h1>
+        <div class="meta-card">
+          <div class="meta-label">Template</div>
+          <div class="meta-value">${escapeHtml_(prettyEnum_(lesson.templateType))}</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">Difficulty</div>
+          <div class="meta-value">${escapeHtml_(prettyEnum_(lesson.difficulty))}</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">Quarter</div>
+          <div class="meta-value">${escapeHtml_(headerInfo.quarter || '')}</div>
+        </div>
 
-        <table class="lesson-meta-table" role="presentation">
-          <tr>
-            <td>
-              <div class="meta-label">Subject</div>
-              <div class="meta-value">${escapeHtml_(lesson.subject)}</div>
-            </td>
-            <td>
-              <div class="meta-label">Grade Level</div>
-              <div class="meta-value">${escapeHtml_(lesson.gradeLevel)}</div>
-            </td>
-            <td>
-              <div class="meta-label">Topic</div>
-              <div class="meta-value">${escapeHtml_(lesson.topic)}</div>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <div class="meta-label">Template</div>
-              <div class="meta-value">${escapeHtml_(prettyEnum_(lesson.templateType))}</div>
-            </td>
-            <td>
-              <div class="meta-label">Difficulty</div>
-              <div class="meta-value">${escapeHtml_(prettyEnum_(lesson.difficulty))}</div>
-            </td>
-            <td>
-              <div class="meta-label">Quarter</div>
-              <div class="meta-value">${escapeHtml_(headerInfo.quarter || '')}</div>
-            </td>
-          </tr>
-          <tr>
-            <td colspan="3">
-              <div class="meta-label">Teacher Name</div>
-              <div class="meta-value">${escapeHtml_(headerInfo.teacherName || '')}</div>
-            </td>
-          </tr>
-        </table>
-      </header>
-    `;
-  }
+        <div class="meta-card meta-card-wide">
+          <div class="meta-label">Teacher Name</div>
+          <div class="meta-value">${escapeHtml_(headerInfo.teacherName || '')}</div>
+        </div>
+      </div>
+    </header>
+  `;
+}
 
   return `
     <header class="lesson-header">
@@ -1557,7 +1553,7 @@ function renderFullConceptSection_(lesson, forPrint) {
   if (forPrint) {
     const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
       return `
-        <article class="card print-concept-flow" data-concept-index="${index}">
+        <div class="card print-concept-flow" data-concept-index="${index}">
           <div class="print-concept-header">
             <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
             <div class="concept-summary">${escapeHtml_(item.summary)}</div>
@@ -1586,7 +1582,7 @@ function renderFullConceptSection_(lesson, forPrint) {
               <div>${escapeHtml_(item.misconception)}</div>
             </div>
           ` : ''}
-        </article>
+        </div>
       `;
     }).join('');
 
@@ -2247,8 +2243,8 @@ function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
       ? `
         <div class="option-preview">
           ${item.options.map(function (option, optionIndex) {
-        return `<div class="option-line"><strong>${String.fromCharCode(65 + optionIndex)}.</strong> ${escapeHtml_(option)}</div>`;
-      }).join('')}
+            return `<div class="option-line"><strong>${String.fromCharCode(65 + optionIndex)}.</strong> ${escapeHtml_(option)}</div>`;
+          }).join('')}
         </div>
         <div class="print-answer-space"></div>
       `
@@ -2296,15 +2292,15 @@ function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
       ${controlsHtml}
       ${forPrint ? '' : `<div id="feedback_${index}" class="feedback"></div>`}
       ${teacherView
-      ? `<div class="teacher-answer-box">
+        ? `<div class="teacher-answer-box">
             <strong>Accepted answer(s):</strong> <span class="editable" data-practice-field="answers">${escapeHtml_(answerText)}</span>
             ${item.hint ? `<div class="hint-line"><strong>Hint:</strong> <span class="editable" data-practice-field="hint">${escapeHtml_(item.hint)}</span></div>` : ''}
           </div>`
-      : `<div id="answer_${index}" class="answer-reveal hidden">
+        : `<div id="answer_${index}" class="answer-reveal hidden">
             <strong>Accepted answer(s):</strong> ${escapeHtml_(answerText)}
             ${item.hint ? `<div class="hint-line"><strong>Hint:</strong> ${escapeHtml_(item.hint)}</div>` : ''}
           </div>`
-    }
+      }
     </article>
   `;
 }
@@ -2401,27 +2397,11 @@ function getPrintStyles_(footerText) {
     '  }',
     '}',
 
-    'html {',
-    '  -webkit-print-color-adjust: exact;',
-    '  print-color-adjust: exact;',
-    '}',
-
-    'body.print-mode {',
-    '  -webkit-print-color-adjust: exact;',
-    '  print-color-adjust: exact;',
+    'html, body.print-mode {',
+    '  -webkit-print-color-adjust: exact !important;',
+    '  print-color-adjust: exact !important;',
     '  background: #fff !important;',
-    '  color: #000;',
-    '  margin: 0;',
-    '  padding: 0;',
-    '}',
-
-    '.print-doc {',
-    '  width: 100%;',
-    '  max-width: none;',
-    '}',
-
-    '.pdf-footnote {',
-    '  display: none !important;',
+    '  color: #000 !important;',
     '}',
 
     'body.print-mode .lesson-sheet {',
@@ -2431,25 +2411,39 @@ function getPrintStyles_(footerText) {
     '  margin: 0 auto;',
     '}',
 
-    'body.print-mode .lesson-meta-table {',
-    '  width: 100%;',
-    '  border-collapse: separate;',
-    '  border-spacing: 12px 10px;',
-    '  table-layout: fixed;',
+    'body.print-mode .lesson-header,',
+    'body.print-mode .section-title,',
+    'body.print-mode .section-note,',
+    'body.print-mode .preview-title {',
+    '  page-break-after: avoid !important;',
+    '  break-after: avoid !important;',
     '}',
 
-    'body.print-mode .lesson-meta-table td {',
-    '  background: var(--template-soft-bg);',
-    '  border: 1px solid var(--template-soft-border);',
-    '  border-radius: 12px;',
-    '  padding: 12px;',
-    '  vertical-align: top;',
+    'body.print-mode .section-title {',
+    '  margin: 18px 0 4px !important;',
+    '  font-size: 17px !important;',
     '}',
 
-    'body.print-mode .quiz-meta-lines {',
-    '  display: grid !important;',
-    '  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;',
-    '  gap: 12px !important;',
+    'body.print-mode .section-note {',
+    '  margin-bottom: 10px !important;',
+    '  font-size: 12px !important;',
+    '  line-height: 1.45 !important;',
+    '}',
+
+    'body.print-mode .card,',
+    'body.print-mode .practice-card,',
+    'body.print-mode .concept-card,',
+    'body.print-mode .guided-learn-card,',
+    'body.print-mode .guided-example-card,',
+    'body.print-mode .review-mini-card,',
+    'body.print-mode .quick-review-card,',
+    'body.print-mode .remediation-model-card,',
+    'body.print-mode .answer-key-item,',
+    'body.print-mode .quiz-info-card,',
+    'body.print-mode .quiz-focus-card {',
+    '  break-inside: avoid !important;',
+    '  page-break-inside: avoid !important;',
+    '  margin-bottom: 12px !important;',
     '}',
 
     'body.print-mode .print-concept-flow {',
@@ -2458,232 +2452,256 @@ function getPrintStyles_(footerText) {
     '  border-left: 5px solid var(--template-accent);',
     '  border-radius: 16px;',
     '  padding: 14px 16px;',
-    '  margin-bottom: 14px;',
+    '  margin-bottom: 12px;',
     '  box-shadow: none;',
-    '  break-inside: auto;',
-    '  page-break-inside: auto;',
-    '  -webkit-box-decoration-break: clone;',
-    '  box-decoration-break: clone;',
-    '}',
-
-    'body.print-mode .print-concept-flow + .print-concept-flow {',
-    '  margin-top: 0;',
-    '}',
-
-    'body.print-mode .print-concept-header {',
-    '  break-after: avoid-page;',
-    '  page-break-after: avoid;',
-    '}',
-
-    'body.print-mode .print-concept-header .concept-title {',
-    '  margin: 0 0 10px;',
-    '}',
-
-    'body.print-mode .print-concept-flow .concept-title {',
-    '  color: var(--template-accent-dark);',
-    '  margin: 0 0 10px;',
-    '}',
-
-    'body.print-mode .print-concept-flow .concept-summary {',
-    '  margin-bottom: 12px;',
-    '}',
-
-    'body.print-mode .print-concept-flow.guided-learn-card,',
-    'body.print-mode .print-concept-flow.review-mini-card,',
-    'body.print-mode .print-concept-flow.remediation-card,',
-    'body.print-mode .print-concept-flow.enrichment-card {',
-    '  break-inside: auto;',
-    '  page-break-inside: auto;',
-    '  -webkit-box-decoration-break: clone;',
-    '  box-decoration-break: clone;',
-    '}',
-
-    'body.print-mode .print-concept-flow.guided-learn-card {',
-    '  background: #fff;',
-    '  border: 1px solid var(--template-subtle-border);',
-    '  border-radius: 16px;',
-    '  padding: 14px 16px;',
-    '  margin-bottom: 14px;',
-    '}',
-
-    'body.print-mode .print-concept-flow.review-mini-card {',
-    '  background: #fff;',
-    '  border: 1px solid var(--template-subtle-border);',
-    '  border-radius: 14px;',
-    '  padding: 14px;',
-    '  margin-bottom: 14px;',
-    '}',
-
-    'body.print-mode .print-concept-flow.remediation-card,',
-    'body.print-mode .print-concept-flow.enrichment-card {',
-    '  background: #fff;',
-    '  border: 1px solid var(--template-subtle-border);',
-    '  border-radius: 14px;',
-    '  padding: 14px;',
-    '  margin-bottom: 14px;',
-    '}',
-
-    'body.print-mode .print-concept-flow.guided-learn-card .concept-title,',
-    'body.print-mode .print-concept-flow.review-mini-card .concept-title,',
-    'body.print-mode .print-concept-flow.remediation-card .concept-title,',
-    'body.print-mode .print-concept-flow.enrichment-card .concept-title {',
-    '  color: var(--template-accent-dark);',
-    '  margin: 0 0 10px;',
-    '}',
-
-    'body.print-mode .print-concept-flow.guided-learn-card .concept-summary,',
-    'body.print-mode .print-concept-flow.review-mini-card .concept-summary,',
-    'body.print-mode .print-concept-flow.remediation-card .concept-summary,',
-    'body.print-mode .print-concept-flow.enrichment-card .concept-summary {',
-    '  margin-bottom: 12px;',
-    '}',
-
-    'body.print-mode .vocab-grid,',
-    'body.print-mode .review-grid,',
-    'body.print-mode .guided-stage-grid,',
-    'body.print-mode .review-list,',
-    'body.print-mode .remediation-grid,',
-    'body.print-mode .enrichment-grid {',
-    '  display: grid;',
-    '  grid-template-columns: repeat(2, minmax(0, 1fr));',
-    '  gap: 12px;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="REVIEW"] .compact-vocab-list {',
-    '  columns: 2;',
-    '  column-gap: 24px;',
-    '}',
-
-    'body.print-mode section {',
-    '  break-inside: auto;',
-    '  page-break-inside: auto;',
-    '  margin-bottom: 12px;',
-    '}',
-
-    'body.print-mode article {',
-    '  break-inside: auto;',
-    '  page-break-inside: auto;',
-    '}',
-
-    'body.print-mode .lesson-header {',
-    '  padding: 14px;',
-    '  margin-bottom: 10px;',
-    '  break-inside: avoid-page;',
-    '  page-break-inside: avoid;',
-    '}',
-
-    'body.print-mode .section-title {',
-    '  font-size: 15px;',
-    '  margin: 14px 0 6px;',
-    '  break-after: avoid-page;',
-    '  page-break-after: avoid;',
-    '}',
-
-    'body.print-mode .section-note {',
-    '  font-size: 12px;',
-    '  line-height: 1.5;',
-    '  margin-bottom: 8px;',
-    '}',
-
-    'body.print-mode .card {',
-    '  padding: 12px;',
-    '  margin-bottom: 10px;',
-    '  box-shadow: none;',
-    '  overflow: visible;',
-    '  break-inside: auto;',
-    '  page-break-inside: auto;',
-    '}',
-
-    'body.print-mode .concept-card,',
-    'body.print-mode .guided-example-card,',
-    'body.print-mode .review-mini-card,',
-    'body.print-mode .remediation-card,',
-    'body.print-mode .remediation-model-card,',
-    'body.print-mode .enrichment-card,',
-    'body.print-mode .practice-card {',
-    '  break-inside: auto;',
-    '  page-break-inside: auto;',
-    '  -webkit-box-decoration-break: clone;',
-    '  box-decoration-break: clone;',
-    '}',
-
-    'body.print-mode .quiz-info-card,',
-    'body.print-mode .quiz-focus-card,',
-    'body.print-mode .answer-key-item,',
-    'body.print-mode .mini-formula-box,',
-    'body.print-mode .review-rule-box,',
-    'body.print-mode .teacher-answer-box,',
-    'body.print-mode .guided-summary-box,',
-    'body.print-mode .guided-symbol-box,',
-    'body.print-mode .review-reminder-box,',
-    'body.print-mode .remediation-help-box,',
-    'body.print-mode .enrichment-note-box,',
-    'body.print-mode .katex-display {',
-    '  break-inside: avoid-page;',
-    '  page-break-inside: avoid;',
-    '  overflow: visible;',
-    '}',
-
-    'body.print-mode .concept-card .formula-box,',
-    'body.print-mode .concept-card .sub-card,',
-    'body.print-mode .concept-card .example-box,',
-    'body.print-mode .concept-card .misconception-box,',
-    'body.print-mode .print-concept-flow .formula-box,',
-    'body.print-mode .print-concept-flow .sub-card,',
-    'body.print-mode .print-concept-flow .example-box,',
-    'body.print-mode .print-concept-flow .misconception-box,',
-    'body.print-mode .remediation-card .misconception-box,',
-    'body.print-mode .enrichment-card .misconception-box,',
-    'body.print-mode .review-mini-card .misconception-box {',
-    '  break-inside: auto;',
-    '  page-break-inside: auto;',
-    '  overflow: visible;',
     '}',
 
     'body.print-mode .concept-summary,',
+    'body.print-mode .example-box,',
+    'body.print-mode .guided-transition-note,',
+    'body.print-mode .objective-text,',
+    'body.print-mode .summary-text,',
     'body.print-mode .practice-question,',
     'body.print-mode .vocab-definition,',
     'body.print-mode .teacher-answer-box,',
     'body.print-mode .answer-reveal,',
-    'body.print-mode .sub-card,',
-    'body.print-mode .example-box,',
-    'body.print-mode .misconception-box,',
-    'body.print-mode .objective-text,',
-    'body.print-mode .summary-text {',
+    'body.print-mode .compact-note,',
+    'body.print-mode .quiz-focus-text,',
+    'body.print-mode .answer-key-question,',
+    'body.print-mode .answer-key-response,',
+    'body.print-mode p,',
+    'body.print-mode li {',
     '  font-size: 12px;',
     '  line-height: 1.5;',
     '  white-space: pre-line;',
     '  overflow-wrap: anywhere;',
     '  word-break: break-word;',
-    '  overflow: visible;',
-    '  orphans: 3;',
-    '  widows: 3;',
+    '  orphans: 3 !important;',
+    '  widows: 3 !important;',
     '}',
 
+    'body.print-mode .formula-box,',
+    'body.print-mode .mini-formula-box,',
+    'body.print-mode .review-rule-box,',
+    'body.print-mode .guided-summary-box,',
+    'body.print-mode .guided-symbol-box,',
+    'body.print-mode .review-reminder-box,',
+    'body.print-mode .remediation-help-box,',
+    'body.print-mode .enrichment-note-box,',
+    'body.print-mode .misconception-box,',
+    'body.print-mode .teacher-answer-box,',
+    'body.print-mode .option-preview,',
+    'body.print-mode .directions-box {',
+    '  break-inside: avoid !important;',
+    '  page-break-inside: avoid !important;',
+    '}',
+
+    'body.print-mode .katex-display,',
     'body.print-mode .formula-value {',
-    '  font-size: 13px;',
-    '  line-height: 1.45;',
-    '  overflow: visible;',
-    '  word-break: break-word;',
-    '}',
-
-    'body.print-mode .katex {',
-    '  max-width: 100%;',
+    '  break-inside: avoid !important;',
+    '  page-break-inside: avoid !important;',
     '}',
 
     'body.print-mode .btn,',
     'body.print-mode .feedback,',
-    'body.print-mode .answer-reveal.hidden {',
+    'body.print-mode .answer-reveal.hidden,',
+    'body.print-mode .editable.active-edit {',
     '  display: none !important;',
     '}',
 
-    'body.print-mode .editable.active-edit {',
-    '  outline: none;',
-    '  background: transparent;',
-    '}'
-  ].join('\n');
-}
+    'body.print-mode .vocab-grid,',
+    'body.print-mode .review-grid,',
+    'body.print-mode .guided-stage-grid,',
+    'body.print-mode .review-list {',
+    '  display: block !important;',
+    '}',
 
+    'body.print-mode .print-lesson-header {',
+    '  padding: 14px 16px !important;',
+    '  margin-bottom: 12px !important;',
+    '}',
+
+    'body.print-mode .print-lesson-header .doc-banner {',
+    '  margin-bottom: 10px !important;',
+    '}',
+
+    'body.print-mode .print-lesson-header .eyebrow {',
+    '  margin-bottom: 6px !important;',
+    '}',
+
+    'body.print-mode .print-lesson-header .lesson-title {',
+    '  font-size: 24px !important;',
+    '  line-height: 1.15 !important;',
+    '  margin: 0 !important;',
+    '}',
+
+    'body.print-mode .print-meta-grid {',
+    '  display: grid !important;',
+    '  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;',
+    '  grid-auto-flow: row !important;',
+    '  align-items: stretch !important;',
+    '  gap: 10px !important;',
+    '  margin-top: 14px !important;',
+    '}',
+
+    'body.print-mode .print-meta-grid .meta-card {',
+    '  display: block !important;',
+    '  min-width: 0 !important;',
+    '  background: var(--template-soft-bg) !important;',
+    '  border: 1px solid var(--template-soft-border) !important;',
+    '  border-radius: 12px !important;',
+    '  padding: 10px 12px !important;',
+    '  break-inside: avoid !important;',
+    '  page-break-inside: avoid !important;',
+    '}',
+
+    'body.print-mode .print-meta-grid .meta-card-wide {',
+    '  grid-column: 1 / -1 !important;',
+    '}',
+
+    'body.print-mode .print-meta-grid .meta-label {',
+    '  display: block !important;',
+    '  font-size: 10px !important;',
+    '  margin-bottom: 3px !important;',
+    '}',
+
+    'body.print-mode .print-meta-grid .meta-value {',
+    '  display: block !important;',
+    '  font-size: 13px !important;',
+    '}',
+
+    '@media print {',
+    '  .print-meta-grid {',
+    '    display: grid !important;',
+    '    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;',
+    '    grid-auto-flow: row !important;',
+    '    gap: 10px !important;',
+    '    margin-top: 14px !important;',
+    '  }',
+    '  .print-meta-grid .meta-card {',
+    '    display: block !important;',
+    '    min-width: 0 !important;',
+    '    background: var(--template-soft-bg) !important;',
+    '    border: 1px solid var(--template-soft-border) !important;',
+    '    border-radius: 12px !important;',
+    '    padding: 10px 12px !important;',
+    '  }',
+    '  .print-meta-grid .meta-card-wide {',
+    '    grid-column: 1 / -1 !important;',
+    '  }',
+    '  .print-meta-grid .meta-label,',
+    '  .print-meta-grid .meta-value {',
+    '    display: block !important;',
+    '  }',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .quiz-info-card,',
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .quiz-focus-card,',
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .directions-box {',
+    '  padding: 10px 12px !important;',
+    '  margin-bottom: 10px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .quiz-meta-lines {',
+    '  display: grid !important;',
+    '  grid-template-columns: 1.6fr 0.8fr 0.8fr !important;',
+    '  gap: 10px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .quiz-line {',
+    '  min-height: 22px !important;',
+    '  gap: 6px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .quiz-line-label {',
+    '  font-size: 10px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .quiz-line-fill {',
+    '  height: 16px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .practice-card {',
+    '  padding: 12px 14px !important;',
+    '  margin-bottom: 8px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .practice-number {',
+    '  margin-bottom: 6px !important;',
+    '  font-size: 10px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .practice-question {',
+    '  margin-bottom: 8px !important;',
+    '  font-size: 14px !important;',
+    '  line-height: 1.5 !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .option-preview {',
+    '  margin: 6px 0 8px !important;',
+    '  padding: 8px 10px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .option-line {',
+    '  margin: 2px 0 !important;',
+    '  font-size: 12px !important;',
+    '  line-height: 1.4 !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .print-answer-space {',
+    '  height: 12px !important;',
+    '  margin-top: 8px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="QUIZ"] .print-answer-space.lines-2 {',
+    '  height: 24px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="REMEDIATION"] .print-concept-flow,',
+    'body.print-mode .lesson-sheet[data-template="REMEDIATION"] .remediation-card {',
+    '  break-inside: auto !important;',
+    '  page-break-inside: auto !important;',
+    '  padding: 12px 14px !important;',
+    '  margin-bottom: 10px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="REMEDIATION"] .remediation-help-box,',
+    'body.print-mode .lesson-sheet[data-template="REMEDIATION"] .misconception-box,',
+    'body.print-mode .lesson-sheet[data-template="REMEDIATION"] .mini-formula-box {',
+    '  break-inside: avoid !important;',
+    '  page-break-inside: avoid !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .print-concept-flow,',
+    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .enrichment-card {',
+    '  break-inside: auto !important;',
+    '  page-break-inside: auto !important;',
+    '  padding: 12px 14px !important;',
+    '  margin-bottom: 10px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .enrichment-note-box,',
+    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .misconception-box,',
+    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .review-rule-box {',
+    '  break-inside: avoid !important;',
+    '  page-break-inside: avoid !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .practice-card {',
+    '  padding: 14px 16px !important;',
+    '  margin-bottom: 8px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .print-answer-space {',
+    '  height: 14px !important;',
+    '  margin-top: 8px !important;',
+    '}',
+
+    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .print-answer-space.lines-2 {',
+    '  height: 28px !important;',
+    '}'
+  ].join('\\n');
+}
 /***************************************
  * 11. HELPERS
  ***************************************/
