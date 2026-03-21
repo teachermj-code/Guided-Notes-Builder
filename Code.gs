@@ -1,9 +1,7 @@
-
 /***************************************
  * LESSON GUIDE BUILDER BY TEACHER MJ
  * Server-side Apps Script
  ***************************************/
-
 /***************************************
  * 1. CONFIG
  ***************************************/
@@ -14,13 +12,11 @@ const APP_CONFIG = Object.freeze({
   defaultTemplate: 'CONCEPT',
   defaultItemCount: 10
 });
-
 const APP_TITLE = APP_CONFIG.title;
 const DEFAULT_MODEL = APP_CONFIG.defaultModel;
 const DEFAULT_LAYOUT_MODE = APP_CONFIG.defaultLayoutMode;
 const DEFAULT_TEMPLATE = APP_CONFIG.defaultTemplate;
 const DEFAULT_ITEM_COUNT = APP_CONFIG.defaultItemCount;
-
 const PREVIEW_MODES = Object.freeze(['STUDENT', 'TEACHER']);
 const LAYOUT_MODES = Object.freeze(['COMPACT', 'STANDARD', 'SPACIOUS']);
 const TEMPLATE_TYPES = Object.freeze([
@@ -37,7 +33,6 @@ const DIFFICULTY_LEVELS = Object.freeze([
   'ABOVE_LEVEL'
 ]);
 const KATEX_DELIMITER_PATTERN = /\\\[(.*?)\\\]|\\\((.*?)\\\)/;
-
 /***************************************
  * 2. WEB APP ENTRY
  ***************************************/
@@ -47,11 +42,9 @@ function doGet() {
     .setTitle(APP_TITLE)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
-
 function getCurrentYear_() {
   return new Date().getFullYear();
 }
-
 /***************************************
  * 3. PUBLIC ACTIONS
  ***************************************/
@@ -206,11 +199,9 @@ function getLessonStyles_() {
     '@media (max-width: 760px){.lesson-meta,.vocab-grid,.review-grid,.quiz-meta-lines,.guided-stage-grid,.review-list,.remediation-grid,.enrichment-grid{grid-template-columns:1fr;}.lesson-sheet[data-template="REVIEW"] .compact-vocab-list{columns:1;}}'
   ].join('');
 }
-
 function buildLessonGuide(formData) {
   const request = sanitizeRequest_(formData);
   const lesson = generateLessonJson_(request);
-
   return {
     ok: true,
     request: request,
@@ -223,15 +214,12 @@ function buildLessonGuide(formData) {
     })
   };
 }
-
 function renderLessonPreview(payload) {
   if (!payload || !payload.lesson) {
     throw new Error('Missing lesson data for preview rendering.');
   }
-
   const lesson = normalizeLesson_(payload.lesson, payload.request || {});
   validateLesson_(lesson, payload.request || {});
-
   return {
     html: renderLessonHtml_(lesson, {
       forPrint: false,
@@ -241,50 +229,39 @@ function renderLessonPreview(payload) {
     })
   };
 }
-
 function getPrintableLessonHtml(payload) {
   if (!payload || !payload.lesson) {
     throw new Error('Missing lesson data for print export.');
   }
-
   const draftRequest = coerceRequest_(payload.request || {});
   const lesson = normalizeLesson_(payload.lesson, draftRequest);
-
   const request = sanitizeRequest_(Object.assign({}, draftRequest, {
     subject: draftRequest.subject || lesson.subject,
     gradeLevel: draftRequest.gradeLevel || lesson.gradeLevel,
     topic: draftRequest.topic || lesson.topic,
     objective: draftRequest.objective || lesson.objective
   }));
-
   validateLesson_(lesson, request);
-
   const copyMode = normalizeEnum_(
     payload.copyMode || request.previewMode,
     PREVIEW_MODES,
     'STUDENT'
   );
-
   const layoutMode = normalizeEnum_(
     payload.layoutMode || request.layoutMode,
     LAYOUT_MODES,
     DEFAULT_LAYOUT_MODE
   );
-
   const headerInfo = getHeaderInfoFromRequest_(request);
-
-  const bodyHtml = renderLessonHtml_(lesson, {
-    forPrint: true,
+  const bodyHtml = renderPrintableLessonHtml_(lesson, {
     copyMode: copyMode,
     layoutMode: layoutMode,
     headerInfo: headerInfo
   });
-
   const suggestedFilename = [
     String(request.topic || lesson.topic || 'Lesson Guide').trim(),
     prettyEnum_(request.templateType || lesson.templateType || DEFAULT_TEMPLATE)
   ].join(' - ');
-
   return {
     filename: suggestedFilename + '.pdf',
     html: buildPrintableDocument_(bodyHtml, {
@@ -293,7 +270,6 @@ function getPrintableLessonHtml(payload) {
     })
   };
 }
-
 /***************************************
  * 4. GEMINI CONFIG
  ***************************************/
@@ -301,17 +277,14 @@ function getGeminiConfig_() {
   const props = PropertiesService.getScriptProperties();
   const apiKey = props.getProperty('GEMINI_API_KEY');
   const model = props.getProperty('GEMINI_MODEL') || DEFAULT_MODEL;
-
   if (!apiKey) {
     throw new Error('Missing GEMINI_API_KEY in Script Properties.');
   }
-
   return {
     apiKey: apiKey,
     model: model
   };
 }
-
 /***************************************
  * 5. GEMINI GENERATION
  ***************************************/
@@ -320,10 +293,8 @@ function generateLessonJson_(request) {
   const schema = getLessonSchema_(request);
   const prompt = buildPrompt_(request);
   const url = buildGeminiUrl_(config.apiKey, config.model);
-
   let lastError = 'Unknown generation error.';
   let outputText = '';
-
   for (let attempt = 1; attempt <= 2; attempt++) {
     const payload = {
       contents: [
@@ -345,42 +316,34 @@ function generateLessonJson_(request) {
         responseJsonSchema: schema
       }
     };
-
     const response = UrlFetchApp.fetch(url, {
       method: 'post',
       contentType: 'application/json',
       payload: JSON.stringify(payload),
       muteHttpExceptions: true
     });
-
     const status = response.getResponseCode();
     const text = response.getContentText();
-
     if (status !== 200) {
       lastError = extractApiError_(text) || ('Gemini API request failed with status ' + status + '.');
       continue;
     }
-
     try {
       const raw = JSON.parse(text);
       outputText = extractCandidateText_(raw);
-
       if (!outputText) {
         lastError = 'Gemini returned an empty response.';
         continue;
       }
-
       const cleanedJson = extractJsonText_(outputText);
       const parsed = JSON.parse(cleanedJson);
       const lesson = normalizeLesson_(parsed, request);
-
       validateLesson_(lesson, request);
       return lesson;
     } catch (err) {
       try {
         const repaired = repairLessonJson_(outputText || text, schema, config.apiKey, config.model);
         const lesson = normalizeLesson_(repaired, request);
-
         validateLesson_(lesson, request);
         return lesson;
       } catch (repairErr) {
@@ -392,10 +355,8 @@ function generateLessonJson_(request) {
       }
     }
   }
-
   throw new Error(lastError);
 }
-
 function buildGeminiUrl_(apiKey, model) {
   return (
     'https://generativelanguage.googleapis.com/v1beta/' +
@@ -404,7 +365,6 @@ function buildGeminiUrl_(apiKey, model) {
     encodeURIComponent(apiKey)
   );
 }
-
 function buildPrompt_(request) {
   const subjectGuidance = getSubjectGuidance_(request.subject);
   const templateGuidance = getTemplateGuidance_(request.templateType);
@@ -415,7 +375,6 @@ function buildPrompt_(request) {
     request.templateType,
     request.difficulty
   );
-
   return [
     'You are an expert instructional content generator for classroom teachers.',
     'Create a classroom-ready lesson guide in JSON only.',
@@ -501,10 +460,8 @@ function buildPrompt_(request) {
     '- Make the tone, section content, and practice style clearly match the selected template.'
   ].join('\n');
 }
-
 function getSubjectGuidance_(subject) {
   const s = String(subject || '').toLowerCase();
-
   if (s.indexOf('math') !== -1) {
     return [
       '- This is a Mathematics lesson.',
@@ -520,44 +477,37 @@ function getSubjectGuidance_(subject) {
       '- Practice items should progress from recall to application when possible.'
     ].join('\n');
   }
-
   if (s.indexOf('science') !== -1) {
     return [
       '- Emphasize scientific accuracy, observation, explanation, and cause-and-effect.',
       '- Use concrete real-world examples and clear terminology.'
     ].join('\n');
   }
-
   if (s.indexOf('english') !== -1) {
     return [
       '- Emphasize grammar, vocabulary, comprehension, and clear expression.',
       '- Use age-appropriate examples and concise explanations.'
     ].join('\n');
   }
-
   if (s.indexOf('filipino') !== -1) {
     return [
       '- Gumamit ng malinaw, wasto, at angkop na wikang Filipino.',
       '- Tiyakin na ang mga paliwanag at halimbawa ay angkop sa antas ng mag-aaral.'
     ].join('\n');
   }
-
   if (s.indexOf('araling') !== -1 || s.indexOf('panlipunan') !== -1 || s === 'ap') {
     return [
       '- Emphasize chronology, geography, civics, source-based understanding, or social interpretation as needed.',
       '- Use concise factual examples and student-friendly wording.'
     ].join('\n');
   }
-
   return [
     '- Keep the lesson accurate, clear, and age-appropriate.',
     '- Balance explanation, examples, and guided practice.'
   ].join('\n');
 }
-
 function getTemplateGuidance_(templateType) {
   const t = normalizeEnum_(templateType, TEMPLATE_TYPES, DEFAULT_TEMPLATE);
-
   switch (t) {
     case 'GUIDED_PRACTICE':
       return [
@@ -571,7 +521,6 @@ function getTemplateGuidance_(templateType) {
         '- Early practice items should be direct and highly accessible.',
         '- Use language that supports confidence, clarity, and gradual release.'
       ].join('\n');
-
     case 'REVIEW':
       return [
         '- Purpose: create a compact review sheet for recalling and checking previously learned ideas.',
@@ -585,7 +534,6 @@ function getTemplateGuidance_(templateType) {
         '- Keep explanations compact so the sheet feels fast to scan and use.',
         '- Do not turn the review into a full direct-instruction lesson.'
       ].join('\n');
-
     case 'QUIZ':
       return [
         '- Purpose: create an assessment-style lesson guide that supports a quiz format.',
@@ -599,7 +547,6 @@ function getTemplateGuidance_(templateType) {
         '- Use precise wording and avoid ambiguity.',
         '- Do not include tutorial phrasing inside the quiz questions.'
       ].join('\n');
-
     case 'REMEDIATION':
       return [
         '- Purpose: support learners who need simpler explanations, smaller steps, and more guided understanding.',
@@ -612,7 +559,6 @@ function getTemplateGuidance_(templateType) {
         '- Practice items must begin with very accessible tasks before moving to slightly more independent work.',
         '- Build difficulty gradually and keep cognitive load low in the earlier items.'
       ].join('\n');
-
     case 'ENRICHMENT':
       return [
         '- Purpose: extend learning beyond standard mastery through deeper thinking, reasoning, and transfer.',
@@ -625,7 +571,6 @@ function getTemplateGuidance_(templateType) {
         '- Later items should involve transfer to new or less familiar situations.',
         '- Increase the thinking demand, not just the size of the numbers.'
       ].join('\n');
-
     default:
       return [
         '- Purpose: create a full concept lesson for classroom instruction.',
@@ -638,10 +583,8 @@ function getTemplateGuidance_(templateType) {
       ].join('\n');
   }
 }
-
 function getTemplateFieldBehavior_(templateType) {
   const t = normalizeEnum_(templateType, TEMPLATE_TYPES, DEFAULT_TEMPLATE);
-
   switch (t) {
     case 'GUIDED_PRACTICE':
       return [
@@ -652,7 +595,6 @@ function getTemplateFieldBehavior_(templateType) {
         '- Use a helpful mix of short-answer, multiple-choice, and true-false when appropriate.',
         '- The first third of the practice items should feel very approachable.'
       ].join('\n');
-
     case 'REVIEW':
       return [
         '- lessonSummary must be brief and focused on the most important ideas to remember.',
@@ -662,7 +604,6 @@ function getTemplateFieldBehavior_(templateType) {
         '- Practice items should give representative mixed review across the topic.',
         '- Keep item wording concise and easy to scan.'
       ].join('\n');
-
     case 'QUIZ':
       return [
         '- lessonSummary must be very short and assessment-oriented.',
@@ -672,7 +613,6 @@ function getTemplateFieldBehavior_(templateType) {
         '- Use direct command wording such as "Solve", "Find", "Choose", "Identify", "Compare", or "Determine".',
         '- Hints must stay short and practical.'
       ].join('\n');
-
     case 'REMEDIATION':
       return [
         '- lessonSummary must be reassuring, clear, and easy to follow.',
@@ -682,7 +622,6 @@ function getTemplateFieldBehavior_(templateType) {
         '- Practice items must begin with very accessible items before moving to slightly more independent work.',
         '- The first half of the practice items should emphasize clarity and confidence-building.'
       ].join('\n');
-
     case 'ENRICHMENT':
       return [
         '- lessonSummary must frame the topic as deeper thinking, richer application, or transfer.',
@@ -692,7 +631,6 @@ function getTemplateFieldBehavior_(templateType) {
         '- At least half of the practice items should require multi-step reasoning, comparison, pattern recognition, or real-world transfer.',
         '- The later items should feel more challenging than standard on-level practice.'
       ].join('\n');
-
     default:
       return [
         '- lessonSummary must provide a strong teaching overview.',
@@ -703,7 +641,6 @@ function getTemplateFieldBehavior_(templateType) {
       ].join('\n');
   }
 }
-
 function getLocalContextGuidance_() {
   return [
     '- Use Philippine classroom context when examples involve names, money, measurement, or everyday situations.',
@@ -711,10 +648,8 @@ function getLocalContextGuidance_() {
     '- Use age-appropriate local names and realistic classroom-friendly contexts.'
   ].join('\n');
 }
-
 function getDifficultyGuidance_(difficulty) {
   const d = normalizeEnum_(difficulty, DIFFICULTY_LEVELS, 'ON_LEVEL');
-
   switch (d) {
     case 'BELOW_LEVEL':
       return [
@@ -725,7 +660,6 @@ function getDifficultyGuidance_(difficulty) {
         '- Use easier early items and smaller jumps in difficulty.',
         '- Prefer clarity, support, and strong scaffolding over complexity.'
       ].join('\n');
-
     case 'ABOVE_LEVEL':
       return [
         '- Use richer reasoning, stronger conceptual connections, and more demanding application.',
@@ -735,7 +669,6 @@ function getDifficultyGuidance_(difficulty) {
         '- Increase the thinking demand, not just the size of the numbers or the length of the wording.',
         '- Keep the content challenging but still clear and classroom-usable.'
       ].join('\n');
-
     default:
       return [
         '- Use grade-appropriate wording, pacing, and conceptual demand.',
@@ -745,12 +678,10 @@ function getDifficultyGuidance_(difficulty) {
       ].join('\n');
   }
 }
-
 function getPracticeDesignGuidance_(templateType, difficulty) {
   const t = normalizeEnum_(templateType, TEMPLATE_TYPES, DEFAULT_TEMPLATE);
   const d = normalizeEnum_(difficulty, DIFFICULTY_LEVELS, 'ON_LEVEL');
   const rules = [];
-
   switch (t) {
     case 'GUIDED_PRACTICE':
       rules.push(
@@ -759,7 +690,6 @@ function getPracticeDesignGuidance_(templateType, difficulty) {
         '- Later items may require more independence, but the progression must stay smooth.'
       );
       break;
-
     case 'REVIEW':
       rules.push(
         '- For REVIEW, use representative mixed review across the topic.',
@@ -767,7 +697,6 @@ function getPracticeDesignGuidance_(templateType, difficulty) {
         '- Keep item wording concise and easy to scan.'
       );
       break;
-
     case 'QUIZ':
       rules.push(
         '- For QUIZ, all practice items must function as assessment items rather than guided activities.',
@@ -775,7 +704,6 @@ function getPracticeDesignGuidance_(templateType, difficulty) {
         '- Keep the sequence balanced and formal.'
       );
       break;
-
     case 'REMEDIATION':
       rules.push(
         '- For REMEDIATION, begin with highly accessible items and increase independence gradually.',
@@ -783,7 +711,6 @@ function getPracticeDesignGuidance_(templateType, difficulty) {
         '- Keep wording very clear and concrete.'
       );
       break;
-
     case 'ENRICHMENT':
       rules.push(
         '- For ENRICHMENT, make later items more demanding than earlier ones.',
@@ -791,14 +718,12 @@ function getPracticeDesignGuidance_(templateType, difficulty) {
         '- Ensure the practice is challenging through thinking demand, not just bigger numbers.'
       );
       break;
-
     default:
       rules.push(
         '- For CONCEPT, move from understanding toward application in a balanced way.',
         '- Start with direct understanding items, then progress toward application.'
       );
   }
-
   switch (d) {
     case 'BELOW_LEVEL':
       rules.push(
@@ -807,7 +732,6 @@ function getPracticeDesignGuidance_(templateType, difficulty) {
         '- Keep reasoning demand moderate and avoid large jumps in complexity.'
       );
       break;
-
     case 'ABOVE_LEVEL':
       rules.push(
         '- Because the difficulty is ABOVE_LEVEL, increase reasoning demand across the set.',
@@ -815,17 +739,14 @@ function getPracticeDesignGuidance_(templateType, difficulty) {
         '- Raise the conceptual challenge while keeping wording age-appropriate and clear.'
       );
       break;
-
     default:
       rules.push(
         '- Because the difficulty is ON_LEVEL, maintain a standard grade-level progression from understanding to application.',
         '- Keep the overall challenge balanced and appropriate for the selected grade level.'
       );
   }
-
   return rules.join('\n');
 }
-
 /***************************************
  * 6. SCHEMA
  ***************************************/
@@ -931,13 +852,11 @@ function getLessonSchema_(request) {
     }
   };
 }
-
 /***************************************
  * 7. REQUEST / LESSON CLEANING
  ***************************************/
 function coerceRequest_(formData) {
   const data = formData || {};
-
   return {
     subject: String(data.subject || '').trim(),
     gradeLevel: String(data.gradeLevel || '').trim(),
@@ -958,28 +877,22 @@ function coerceRequest_(formData) {
     customHeader: String(data.customHeader || '').trim()
   };
 }
-
 function sanitizeRequest_(formData) {
   const cleaned = coerceRequest_(formData);
-
   if (!cleaned.subject) throw new Error('Subject is required.');
   if (!cleaned.gradeLevel) throw new Error('Grade level is required.');
   if (!cleaned.topic) throw new Error('Topic is required.');
-
   return cleaned;
 }
-
 function normalizeLesson_(lesson, fallbackRequest) {
   const base = lesson || {};
   const req = fallbackRequest || {};
   const expectedItemCount = toBoundedInteger_(req.itemCount, DEFAULT_ITEM_COUNT, 8, 20);
-
   const keyConcepts = Array.isArray(base.keyConcepts) ? base.keyConcepts : [];
   const practiceItems = Array.isArray(base.practiceItems) ? base.practiceItems : [];
   const teacherNotes = Array.isArray(base.teacherNotes) ? base.teacherNotes : [];
   const successCriteria = Array.isArray(base.successCriteria) ? base.successCriteria : [];
   const vocabulary = Array.isArray(base.vocabulary) ? base.vocabulary : [];
-
   return {
     title: String(base.title || req.topic || 'Lesson Guide').trim(),
     subject: String(base.subject || req.subject || '').trim(),
@@ -1022,11 +935,9 @@ function normalizeLesson_(lesson, fallbackRequest) {
       const acceptedAnswers = Array.isArray(item && item.acceptedAnswers)
         ? item.acceptedAnswers
         : ((item && item.answer) ? [String(item.answer)] : []);
-
       if (type === 'true-false' && options.length === 0) {
         options = ['True', 'False'];
       }
-
       return {
         type: type,
         question: normalizeDisplayText_(repairLatexText_((item && item.question) || '')),
@@ -1048,10 +959,8 @@ function normalizeLesson_(lesson, fallbackRequest) {
       .filter(Boolean)
   };
 }
-
 function normalizeItemType_(value) {
   const t = String(value || '').toLowerCase().trim();
-
   if (t === 'multiple-choice' || t === 'multiple choice' || t === 'mcq') {
     return 'multiple-choice';
   }
@@ -1060,54 +969,42 @@ function normalizeItemType_(value) {
   }
   return 'short-answer';
 }
-
 function validateLesson_(lesson, request) {
   const req = request || {};
   const expectedItemCount = toBoundedInteger_(req.itemCount, DEFAULT_ITEM_COUNT, 8, 20);
   const minimumConceptCount = isMathSubject_(lesson.subject) ? 4 : 3;
-
   if (!lesson.title) throw new Error('Lesson title is missing.');
   if (!lesson.subject) throw new Error('Lesson subject is missing.');
   if (!lesson.gradeLevel) throw new Error('Lesson grade level is missing.');
   if (!lesson.topic) throw new Error('Lesson topic is missing.');
   if (!lesson.lessonSummary) throw new Error('Lesson summary is missing.');
   if (!lesson.objective) throw new Error('Lesson objective is missing.');
-
   if (!Array.isArray(lesson.keyConcepts) || lesson.keyConcepts.length < minimumConceptCount) {
     throw new Error('Lesson must contain enough key concepts for the selected subject.');
   }
-
   if (!Array.isArray(lesson.practiceItems) || lesson.practiceItems.length !== expectedItemCount) {
     throw new Error('Lesson must contain exactly ' + expectedItemCount + ' practice items.');
   }
-
   if (req.includeSuccessCriteria && (!Array.isArray(lesson.successCriteria) || lesson.successCriteria.length < 3)) {
     throw new Error('Lesson must contain at least 3 success criteria.');
   }
-
   if (req.includeVocabulary && (!Array.isArray(lesson.vocabulary) || lesson.vocabulary.length < 3)) {
     throw new Error('Lesson must contain at least 3 vocabulary entries.');
   }
-
   lesson.keyConcepts.forEach(function (item, index) {
     const itemNumber = index + 1;
-
     if (!item.heading || !item.summary || !item.workedExample) {
       throw new Error('Key concept ' + itemNumber + ' is incomplete.');
     }
-
     if (isMathSubject_(lesson.subject) && !item.formula) {
       throw new Error('Math key concept ' + itemNumber + ' must include a formula.');
     }
-
     if (isMathSubject_(lesson.subject) && item.formula && !KATEX_DELIMITER_PATTERN.test(item.formula)) {
       throw new Error('Math key concept ' + itemNumber + ' formula must use KaTeX delimiters.');
     }
   });
-
   lesson.practiceItems.forEach(function (item, index) {
     const itemNumber = index + 1;
-
     if (!item.question) {
       throw new Error('Practice item ' + itemNumber + ' has no question.');
     }
@@ -1122,7 +1019,6 @@ function validateLesson_(lesson, request) {
     }
   });
 }
-
 /***************************************
  * 8. JSON EXTRACTION / REPAIR
  ***************************************/
@@ -1130,7 +1026,6 @@ function extractCandidateText_(apiResponse) {
   if (!apiResponse || !apiResponse.candidates || !apiResponse.candidates.length) {
     return '';
   }
-
   const parts = (((apiResponse.candidates[0] || {}).content || {}).parts || []);
   return parts
     .map(function (part) {
@@ -1139,7 +1034,6 @@ function extractCandidateText_(apiResponse) {
     .join('')
     .trim();
 }
-
 function extractApiError_(text) {
   try {
     const parsed = JSON.parse(text);
@@ -1148,26 +1042,20 @@ function extractApiError_(text) {
     return '';
   }
 }
-
 function extractJsonText_(text) {
   let cleaned = String(text || '').trim();
-
   cleaned = cleaned
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/i, '')
     .replace(/\s*```$/, '')
     .trim();
-
   const firstBrace = cleaned.indexOf('{');
   const lastBrace = cleaned.lastIndexOf('}');
-
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
     cleaned = cleaned.substring(firstBrace, lastBrace + 1);
   }
-
   return cleaned;
 }
-
 function repairLessonJson_(brokenJsonText, schema, apiKey, model) {
   const url = buildGeminiUrl_(apiKey, model);
   const repairPrompt = [
@@ -1180,7 +1068,6 @@ function repairLessonJson_(brokenJsonText, schema, apiKey, model) {
     'Malformed JSON:',
     brokenJsonText
   ].join('\n');
-
   const payload = {
     contents: [
       {
@@ -1195,33 +1082,26 @@ function repairLessonJson_(brokenJsonText, schema, apiKey, model) {
       responseJsonSchema: schema
     }
   };
-
   const response = UrlFetchApp.fetch(url, {
     method: 'post',
     contentType: 'application/json',
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   });
-
   const status = response.getResponseCode();
   const text = response.getContentText();
-
   if (status !== 200) {
     throw new Error(extractApiError_(text) || ('Repair request failed with status ' + status + '.'));
   }
-
   const raw = JSON.parse(text);
   const outputText = extractCandidateText_(raw);
-
   if (!outputText) {
     throw new Error('Repair response was empty.');
   }
-
   return JSON.parse(extractJsonText_(outputText));
 }
-
 /***************************************
- * 9. HTML RENDERING
+ * 9. HTML RENDERING - SCREEN PATH (FULL ORIGINAL)
  ***************************************/
 function renderLessonHtml_(lesson, options) {
   const opts = options || {};
@@ -1231,7 +1111,6 @@ function renderLessonHtml_(lesson, options) {
   const layoutMode = normalizeEnum_(opts.layoutMode, LAYOUT_MODES, DEFAULT_LAYOUT_MODE);
   const headerInfo = opts.headerInfo || {};
   const templateType = normalizeEnum_(lesson.templateType, TEMPLATE_TYPES, DEFAULT_TEMPLATE);
-
   const topHeaderHtml = renderTopHeaderHtml_(lesson, teacherView, headerInfo, forPrint);
   const lessonSheetClass = 'lesson-sheet layout-' + layoutMode.toLowerCase();
   const bodyHtml = renderTemplateBody_(lesson, {
@@ -1239,7 +1118,6 @@ function renderLessonHtml_(lesson, options) {
     forPrint: forPrint,
     templateType: templateType
   });
-
   return (
     '<div class="' + lessonSheetClass + '" data-copy-mode="' + copyMode + '" data-template="' + escapeHtml_(templateType) + '">' +
     topHeaderHtml +
@@ -1248,55 +1126,55 @@ function renderLessonHtml_(lesson, options) {
     '</div>'
   );
 }
-
 function renderTopHeaderHtml_(lesson, teacherView, headerInfo, forPrint) {
-if (forPrint) {
-  return `
-    <header class="lesson-header print-lesson-header">
-      <div class="doc-banner">
-        ${headerInfo.schoolName ? `<div class="school-name">${escapeHtml_(headerInfo.schoolName)}</div>` : ''}
-        ${headerInfo.customHeader ? `<div class="custom-header">${escapeHtml_(headerInfo.customHeader)}</div>` : ''}
-      </div>
-
-      <div class="eyebrow">${teacherView ? 'Teacher Copy' : 'Student Copy'}</div>
-      <h1 class="lesson-title">${escapeHtml_(lesson.title)}</h1>
-
-      <div class="print-meta-grid">
-        <div class="meta-card">
-          <div class="meta-label">Subject</div>
-          <div class="meta-value">${escapeHtml_(lesson.subject)}</div>
+  if (forPrint) {
+    return `
+      <header class="lesson-header print-lesson-header">
+        <div class="doc-banner">
+          ${headerInfo.schoolName ? `<div class="school-name">${escapeHtml_(headerInfo.schoolName)}</div>` : ''}
+          ${headerInfo.customHeader ? `<div class="custom-header">${escapeHtml_(headerInfo.customHeader)}</div>` : ''}
         </div>
-        <div class="meta-card">
-          <div class="meta-label">Grade Level</div>
-          <div class="meta-value">${escapeHtml_(lesson.gradeLevel)}</div>
-        </div>
-        <div class="meta-card">
-          <div class="meta-label">Topic</div>
-          <div class="meta-value">${escapeHtml_(lesson.topic)}</div>
-        </div>
-
-        <div class="meta-card">
-          <div class="meta-label">Template</div>
-          <div class="meta-value">${escapeHtml_(prettyEnum_(lesson.templateType))}</div>
-        </div>
-        <div class="meta-card">
-          <div class="meta-label">Difficulty</div>
-          <div class="meta-value">${escapeHtml_(prettyEnum_(lesson.difficulty))}</div>
-        </div>
-        <div class="meta-card">
-          <div class="meta-label">Quarter</div>
-          <div class="meta-value">${escapeHtml_(headerInfo.quarter || '')}</div>
-        </div>
-
-        <div class="meta-card meta-card-wide">
-          <div class="meta-label">Teacher Name</div>
-          <div class="meta-value">${escapeHtml_(headerInfo.teacherName || '')}</div>
-        </div>
-      </div>
-    </header>
-  `;
-}
-
+        <div class="eyebrow">${teacherView ? 'Teacher Copy' : 'Student Copy'}</div>
+        <h1 class="lesson-title">${escapeHtml_(lesson.title)}</h1>
+        <table class="lesson-meta-table" role="presentation">
+          <tr>
+            <td>
+              <div class="meta-label">Subject</div>
+              <div class="meta-value">${escapeHtml_(lesson.subject)}</div>
+            </td>
+            <td>
+              <div class="meta-label">Grade Level</div>
+              <div class="meta-value">${escapeHtml_(lesson.gradeLevel)}</div>
+            </td>
+            <td>
+              <div class="meta-label">Topic</div>
+              <div class="meta-value">${escapeHtml_(lesson.topic)}</div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div class="meta-label">Template</div>
+              <div class="meta-value">${escapeHtml_(prettyEnum_(lesson.templateType))}</div>
+            </td>
+            <td>
+              <div class="meta-label">Difficulty</div>
+              <div class="meta-value">${escapeHtml_(prettyEnum_(lesson.difficulty))}</div>
+            </td>
+            <td>
+              <div class="meta-label">Quarter</div>
+              <div class="meta-value">${escapeHtml_(headerInfo.quarter || '')}</div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="3">
+              <div class="meta-label">Teacher Name</div>
+              <div class="meta-value">${escapeHtml_(headerInfo.teacherName || '')}</div>
+            </td>
+          </tr>
+        </table>
+      </header>
+    `;
+  }
   return `
     <header class="lesson-header">
       <div class="doc-banner">
@@ -1317,7 +1195,6 @@ if (forPrint) {
     </header>
   `;
 }
-
 function renderTemplateBody_(lesson, options) {
   const opts = options || {};
   const teacherView = !!opts.teacherView;
@@ -1327,7 +1204,6 @@ function renderTemplateBody_(lesson, options) {
     TEMPLATE_TYPES,
     DEFAULT_TEMPLATE
   );
-
   const renderers = {
     CONCEPT: renderConceptTemplate_,
     GUIDED_PRACTICE: renderGuidedPracticeTemplate_,
@@ -1336,10 +1212,8 @@ function renderTemplateBody_(lesson, options) {
     REMEDIATION: renderRemediationTemplate_,
     ENRICHMENT: renderEnrichmentTemplate_
   };
-
   return (renderers[templateType] || renderConceptTemplate_)(lesson, teacherView, forPrint);
 }
-
 function renderConceptTemplate_(lesson, teacherView, forPrint) {
   return [
     renderObjectiveSection_(lesson),
@@ -1356,7 +1230,6 @@ function renderConceptTemplate_(lesson, teacherView, forPrint) {
     renderTeacherNotesSection_(lesson, teacherView)
   ].join('');
 }
-
 function renderGuidedPracticeTemplate_(lesson, teacherView, forPrint) {
   return [
     renderObjectiveSection_(lesson),
@@ -1374,7 +1247,6 @@ function renderGuidedPracticeTemplate_(lesson, teacherView, forPrint) {
     renderTeacherNotesSection_(lesson, teacherView)
   ].join('');
 }
-
 function renderReviewTemplate_(lesson, teacherView, forPrint) {
   return [
     renderObjectiveSection_(lesson),
@@ -1391,7 +1263,6 @@ function renderReviewTemplate_(lesson, teacherView, forPrint) {
     renderTeacherNotesSection_(lesson, teacherView)
   ].join('');
 }
-
 function renderQuizTemplate_(lesson, teacherView, forPrint) {
   return [
     teacherView ? renderQuizTeacherOverviewSection_(lesson) : '',
@@ -1406,10 +1277,8 @@ function renderQuizTemplate_(lesson, teacherView, forPrint) {
     renderTeacherNotesSection_(lesson, teacherView)
   ].join('');
 }
-
 function renderRemediationTemplate_(lesson, teacherView, forPrint) {
   const splitIndex = Math.ceil((lesson.practiceItems || []).length / 2);
-
   return [
     renderObjectiveSection_(lesson),
     renderSuccessCriteriaSection_(lesson),
@@ -1434,10 +1303,8 @@ function renderRemediationTemplate_(lesson, teacherView, forPrint) {
     renderTeacherNotesSection_(lesson, teacherView)
   ].join('');
 }
-
 function renderEnrichmentTemplate_(lesson, teacherView, forPrint) {
   const splitIndex = Math.ceil((lesson.practiceItems || []).length / 2);
-
   return [
     renderObjectiveSection_(lesson),
     renderSuccessCriteriaSection_(lesson),
@@ -1461,7 +1328,6 @@ function renderEnrichmentTemplate_(lesson, teacherView, forPrint) {
     renderTeacherNotesSection_(lesson, teacherView)
   ].join('');
 }
-
 function renderObjectiveSection_(lesson) {
   return `
     <section>
@@ -1472,12 +1338,10 @@ function renderObjectiveSection_(lesson) {
     </section>
   `;
 }
-
 function renderSuccessCriteriaSection_(lesson) {
   if (!lesson.successCriteria || !lesson.successCriteria.length) {
     return '';
   }
-
   return `
     <section>
       <h2 class="section-title">Success Criteria</h2>
@@ -1491,12 +1355,10 @@ function renderSuccessCriteriaSection_(lesson) {
     </section>
   `;
 }
-
 function renderVocabularySection_(lesson, compact) {
   if (!lesson.vocabulary || !lesson.vocabulary.length) {
     return '';
   }
-
   if (compact) {
     return `
       <section>
@@ -1516,7 +1378,6 @@ function renderVocabularySection_(lesson, compact) {
       </section>
     `;
   }
-
   return `
     <section>
       <h2 class="section-title">Vocabulary</h2>
@@ -1535,10 +1396,8 @@ function renderVocabularySection_(lesson, compact) {
     </section>
   `;
 }
-
 function renderSummarySection_(lesson, title) {
   if (!lesson.lessonSummary) return '';
-
   return `
     <section>
       <h2 class="section-title">${escapeHtml_(title || 'Lesson Overview')}</h2>
@@ -1548,44 +1407,38 @@ function renderSummarySection_(lesson, title) {
     </section>
   `;
 }
-
 function renderFullConceptSection_(lesson, forPrint) {
   if (forPrint) {
     const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
       return `
-        <div class="card print-concept-flow" data-concept-index="${index}">
+        <article class="card print-concept-flow" data-concept-index="${index}">
           <div class="print-concept-header">
             <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
             <div class="concept-summary">${escapeHtml_(item.summary)}</div>
           </div>
-
           ${item.formula ? `
             <div class="formula-box">
               <div class="formula-label">Formula</div>
               <div class="formula-value formula-text">${escapeHtml_(item.formula)}</div>
             </div>
           ` : ''}
-
           <div class="sub-card">
             <div class="sub-card-label">Meaning of Symbols / Important Terms</div>
             <div>${escapeHtml_(item.symbolMeaning)}</div>
           </div>
-
           <div class="example-box">
             <strong>Worked Example:</strong>
             <div>${escapeHtml_(item.workedExample)}</div>
           </div>
-
           ${item.misconception ? `
             <div class="misconception-box">
               <strong>Common Misconception:</strong>
               <div>${escapeHtml_(item.misconception)}</div>
             </div>
           ` : ''}
-        </div>
+        </article>
       `;
     }).join('');
-
     return `
       <section>
         <h2 class="section-title">Key Concepts</h2>
@@ -1594,7 +1447,6 @@ function renderFullConceptSection_(lesson, forPrint) {
       </section>
     `;
   }
-
   const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
       <article class="card concept-card" data-concept-index="${index}">
@@ -1623,7 +1475,6 @@ function renderFullConceptSection_(lesson, forPrint) {
       </article>
     `;
   }).join('');
-
   return `
     <section>
       <h2 class="section-title">Key Concepts</h2>
@@ -1632,7 +1483,6 @@ function renderFullConceptSection_(lesson, forPrint) {
     </section>
   `;
 }
-
 function renderGuidedPracticeFocusSection_(lesson) {
   return `
     <section>
@@ -1644,30 +1494,25 @@ function renderGuidedPracticeFocusSection_(lesson) {
     </section>
   `;
 }
-
 function renderGuidedPracticeLearnSection_(lesson, forPrint) {
   if (forPrint) {
     const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
       return `
         <article class="card print-concept-flow guided-learn-card" data-concept-index="${index}">
           <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
-
           <div class="guided-summary-box">
             <div class="concept-summary">${escapeHtml_(item.summary)}</div>
           </div>
-
           ${item.formula ? `
             <div class="mini-formula-box">
               <div class="mini-label">Useful Formula / Rule</div>
               <div class="formula-value formula-text">${escapeHtml_(item.formula)}</div>
             </div>
           ` : ''}
-
           <div class="guided-symbol-box">
             <div class="sub-card-label">Key Terms and Symbols</div>
             <div class="compact-note">${escapeHtml_(item.symbolMeaning)}</div>
           </div>
-
           ${item.misconception ? `
             <div class="misconception-box">
               <strong>Watch Out:</strong>
@@ -1677,7 +1522,6 @@ function renderGuidedPracticeLearnSection_(lesson, forPrint) {
         </article>
       `;
     }).join('');
-
     return `
       <section>
         <h2 class="section-title">LEARN</h2>
@@ -1686,28 +1530,23 @@ function renderGuidedPracticeLearnSection_(lesson, forPrint) {
       </section>
     `;
   }
-
   const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
       <article class="card guided-learn-card" data-concept-index="${index}">
         <h3 class="concept-title editable" data-concept-field="heading">${escapeHtml_(item.heading)}</h3>
-
         <div class="guided-summary-box">
           <div class="concept-summary editable" data-concept-field="summary">${escapeHtml_(item.summary)}</div>
         </div>
-
         ${item.formula ? `
           <div class="mini-formula-box">
             <div class="mini-label">Useful Formula / Rule</div>
             <div class="formula-value formula-text" data-concept-field="formula">${escapeHtml_(item.formula)}</div>
           </div>
         ` : ''}
-
         <div class="guided-symbol-box">
           <div class="sub-card-label">Key Terms and Symbols</div>
           <div class="editable compact-note" data-concept-field="symbolMeaning">${escapeHtml_(item.symbolMeaning)}</div>
         </div>
-
         ${item.misconception ? `
           <div class="misconception-box">
             <strong>Watch Out:</strong>
@@ -1717,7 +1556,6 @@ function renderGuidedPracticeLearnSection_(lesson, forPrint) {
       </article>
     `;
   }).join('');
-
   return `
     <section>
       <h2 class="section-title">LEARN</h2>
@@ -1728,7 +1566,6 @@ function renderGuidedPracticeLearnSection_(lesson, forPrint) {
     </section>
   `;
 }
-
 function renderGuidedPracticeModelSection_(lesson) {
   const modelsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
@@ -1742,7 +1579,6 @@ function renderGuidedPracticeModelSection_(lesson) {
       </article>
     `;
   }).join('');
-
   return `
     <section>
       <h2 class="section-title">PRACTICE</h2>
@@ -1751,7 +1587,6 @@ function renderGuidedPracticeModelSection_(lesson) {
     </section>
   `;
 }
-
 function renderReviewFocusSection_(lesson) {
   return `
     <section>
@@ -1763,7 +1598,6 @@ function renderReviewFocusSection_(lesson) {
     </section>
   `;
 }
-
 function renderReviewConceptSection_(lesson, forPrint) {
   if (forPrint) {
     const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
@@ -1771,21 +1605,17 @@ function renderReviewConceptSection_(lesson, forPrint) {
         <article class="card print-concept-flow review-mini-card quick-review-card" data-concept-index="${index}">
           <div class="review-mini-title">QUICK REMINDER</div>
           <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
-
           <div class="concept-summary">${escapeHtml_(item.summary)}</div>
-
           ${item.formula ? `
             <div class="review-rule-box">
               <div class="mini-label">Formula / Rule</div>
               <div class="formula-value formula-text">${escapeHtml_(item.formula)}</div>
             </div>
           ` : ''}
-
           <div class="review-reminder-box">
             <div class="sub-card-label">Remember This</div>
             <div class="compact-note">${escapeHtml_(item.symbolMeaning)}</div>
           </div>
-
           ${item.misconception ? `
             <div class="misconception-box">
               <strong>Common Error:</strong>
@@ -1795,7 +1625,6 @@ function renderReviewConceptSection_(lesson, forPrint) {
         </article>
       `;
     }).join('');
-
     return `
       <section>
         <h2 class="section-title">QUICK REMINDERS</h2>
@@ -1804,27 +1633,22 @@ function renderReviewConceptSection_(lesson, forPrint) {
       </section>
     `;
   }
-
   const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
       <article class="review-mini-card quick-review-card" data-concept-index="${index}">
         <div class="review-mini-title">QUICK REMINDER</div>
         <h3 class="concept-title editable" data-concept-field="heading">${escapeHtml_(item.heading)}</h3>
-
         <div class="concept-summary editable" data-concept-field="summary">${escapeHtml_(item.summary)}</div>
-
         ${item.formula ? `
           <div class="review-rule-box">
             <div class="mini-label">Formula / Rule</div>
             <div class="formula-value formula-text" data-concept-field="formula">${escapeHtml_(item.formula)}</div>
           </div>
         ` : ''}
-
         <div class="review-reminder-box">
           <div class="sub-card-label">Remember This</div>
           <div class="editable compact-note" data-concept-field="symbolMeaning">${escapeHtml_(item.symbolMeaning)}</div>
         </div>
-
         ${item.misconception ? `
           <div class="misconception-box">
             <strong>Common Error:</strong>
@@ -1834,7 +1658,6 @@ function renderReviewConceptSection_(lesson, forPrint) {
       </article>
     `;
   }).join('');
-
   return `
     <section>
       <h2 class="section-title">QUICK REMINDERS</h2>
@@ -1845,7 +1668,6 @@ function renderReviewConceptSection_(lesson, forPrint) {
     </section>
   `;
 }
-
 function renderQuizTeacherOverviewSection_(lesson) {
   return `
     <section>
@@ -1853,7 +1675,6 @@ function renderQuizTeacherOverviewSection_(lesson) {
       <div class="quiz-focus-card">
         <div class="quiz-focus-title">Objective</div>
         <div class="editable quiz-focus-text objective-text" data-field="objective">${escapeHtml_(lesson.objective)}</div>
-
         ${lesson.successCriteria && lesson.successCriteria.length ? `
           <div class="quiz-focus-block">
             <div class="quiz-focus-title">What This Checks</div>
@@ -1868,7 +1689,6 @@ function renderQuizTeacherOverviewSection_(lesson) {
     </section>
   `;
 }
-
 function renderQuizInfoSection_(teacherView) {
   return `
     <section>
@@ -1892,12 +1712,10 @@ function renderQuizInfoSection_(teacherView) {
     </section>
   `;
 }
-
 function renderQuizDirectionsSection_(teacherView, forPrint) {
   const previewOnlyNote = (!teacherView && !forPrint)
     ? '<li>Preview buttons are for on-screen checking only and will not appear in print.</li>'
     : '';
-
   return `
     <section>
       <h2 class="section-title">Directions</h2>
@@ -1914,7 +1732,6 @@ function renderQuizDirectionsSection_(teacherView, forPrint) {
     </section>
   `;
 }
-
 function renderRemediationFocusSection_(lesson) {
   return `
     <section>
@@ -1926,7 +1743,6 @@ function renderRemediationFocusSection_(lesson) {
     </section>
   `;
 }
-
 function renderRemediationConceptSection_(lesson, forPrint) {
   if (forPrint) {
     const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
@@ -1934,21 +1750,17 @@ function renderRemediationConceptSection_(lesson, forPrint) {
         <article class="card print-concept-flow remediation-card" data-concept-index="${index}">
           <div class="remediation-model-title">UNDERSTAND</div>
           <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
-
           <div class="concept-summary">${escapeHtml_(item.summary)}</div>
-
           ${item.formula ? `
             <div class="mini-formula-box">
               <div class="mini-label">Rule / Formula</div>
               <div class="formula-value formula-text">${escapeHtml_(item.formula)}</div>
             </div>
           ` : ''}
-
           <div class="remediation-help-box">
             <div class="sub-card-label">Helpful Terms and Symbols</div>
             <div class="compact-note">${escapeHtml_(item.symbolMeaning)}</div>
           </div>
-
           ${item.misconception ? `
             <div class="misconception-box">
               <strong>Watch Out:</strong>
@@ -1958,7 +1770,6 @@ function renderRemediationConceptSection_(lesson, forPrint) {
         </article>
       `;
     }).join('');
-
     return `
       <section>
         <h2 class="section-title">UNDERSTAND</h2>
@@ -1967,27 +1778,22 @@ function renderRemediationConceptSection_(lesson, forPrint) {
       </section>
     `;
   }
-
   const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
       <article class="remediation-card" data-concept-index="${index}">
         <div class="remediation-model-title">UNDERSTAND</div>
         <h3 class="concept-title editable" data-concept-field="heading">${escapeHtml_(item.heading)}</h3>
-
         <div class="concept-summary editable" data-concept-field="summary">${escapeHtml_(item.summary)}</div>
-
         ${item.formula ? `
           <div class="mini-formula-box">
             <div class="mini-label">Rule / Formula</div>
             <div class="formula-value formula-text" data-concept-field="formula">${escapeHtml_(item.formula)}</div>
           </div>
         ` : ''}
-
         <div class="remediation-help-box">
           <div class="sub-card-label">Helpful Terms and Symbols</div>
           <div class="editable compact-note" data-concept-field="symbolMeaning">${escapeHtml_(item.symbolMeaning)}</div>
         </div>
-
         ${item.misconception ? `
           <div class="misconception-box">
             <strong>Watch Out:</strong>
@@ -1997,7 +1803,6 @@ function renderRemediationConceptSection_(lesson, forPrint) {
       </article>
     `;
   }).join('');
-
   return `
     <section>
       <h2 class="section-title">UNDERSTAND</h2>
@@ -2008,7 +1813,6 @@ function renderRemediationConceptSection_(lesson, forPrint) {
     </section>
   `;
 }
-
 function renderRemediationModelSection_(lesson) {
   const modelsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
@@ -2022,7 +1826,6 @@ function renderRemediationModelSection_(lesson) {
       </article>
     `;
   }).join('');
-
   return `
     <section>
       <h2 class="section-title">FOLLOW</h2>
@@ -2031,7 +1834,6 @@ function renderRemediationModelSection_(lesson) {
     </section>
   `;
 }
-
 function renderEnrichmentRecallSection_(lesson) {
   return `
     <section>
@@ -2043,7 +1845,6 @@ function renderEnrichmentRecallSection_(lesson) {
     </section>
   `;
 }
-
 function renderEnrichmentConceptSection_(lesson, forPrint) {
   if (forPrint) {
     const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
@@ -2051,21 +1852,17 @@ function renderEnrichmentConceptSection_(lesson, forPrint) {
         <article class="card print-concept-flow enrichment-card" data-concept-index="${index}">
           <div class="enrichment-card-title">THINK DEEPER</div>
           <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
-
           <div class="concept-summary">${escapeHtml_(item.summary)}</div>
-
           ${item.formula ? `
             <div class="review-rule-box">
               <div class="mini-label">Key Rule / Relationship</div>
               <div class="formula-value formula-text">${escapeHtml_(item.formula)}</div>
             </div>
           ` : ''}
-
           <div class="enrichment-note-box">
             <div class="sub-card-label">Big Idea to Keep in Mind</div>
             <div class="compact-note">${escapeHtml_(item.symbolMeaning)}</div>
           </div>
-
           ${item.misconception ? `
             <div class="misconception-box">
               <strong>Avoid This Shortcut Error:</strong>
@@ -2075,7 +1872,6 @@ function renderEnrichmentConceptSection_(lesson, forPrint) {
         </article>
       `;
     }).join('');
-
     return `
       <section>
         <h2 class="section-title">THINK DEEPER</h2>
@@ -2084,27 +1880,22 @@ function renderEnrichmentConceptSection_(lesson, forPrint) {
       </section>
     `;
   }
-
   const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
     return `
       <article class="enrichment-card" data-concept-index="${index}">
         <div class="enrichment-card-title">THINK DEEPER</div>
         <h3 class="concept-title editable" data-concept-field="heading">${escapeHtml_(item.heading)}</h3>
-
         <div class="concept-summary editable" data-concept-field="summary">${escapeHtml_(item.summary)}</div>
-
         ${item.formula ? `
           <div class="review-rule-box">
             <div class="mini-label">Key Rule / Relationship</div>
             <div class="formula-value formula-text" data-concept-field="formula">${escapeHtml_(item.formula)}</div>
           </div>
         ` : ''}
-
         <div class="enrichment-note-box">
           <div class="sub-card-label">Big Idea to Keep in Mind</div>
           <div class="editable compact-note" data-concept-field="symbolMeaning">${escapeHtml_(item.symbolMeaning)}</div>
         </div>
-
         ${item.misconception ? `
           <div class="misconception-box">
             <strong>Avoid This Shortcut Error:</strong>
@@ -2114,7 +1905,6 @@ function renderEnrichmentConceptSection_(lesson, forPrint) {
       </article>
     `;
   }).join('');
-
   return `
     <section>
       <h2 class="section-title">THINK DEEPER</h2>
@@ -2125,7 +1915,6 @@ function renderEnrichmentConceptSection_(lesson, forPrint) {
     </section>
   `;
 }
-
 function renderPracticeSection_(lesson, teacherView, forPrint, config) {
   const cfg = config || {};
   const title = cfg.title || 'Individual Practice';
@@ -2134,11 +1923,9 @@ function renderPracticeSection_(lesson, teacherView, forPrint, config) {
       ? 'Teacher view shows accepted answers and hints.'
       : 'Answer all items. Use the interactive buttons for immediate checking.'
   );
-
   const practiceHtml = lesson.practiceItems.map(function (item, index) {
     return renderPracticeItemHtml_(item, index, teacherView, forPrint);
   }).join('');
-
   return `
     <section class="practice-section">
       <h2 class="section-title">${escapeHtml_(title)}</h2>
@@ -2147,22 +1934,18 @@ function renderPracticeSection_(lesson, teacherView, forPrint, config) {
     </section>
   `;
 }
-
 function renderPracticeGroupSection_(lesson, teacherView, forPrint, config, startIndex, endIndex) {
   const cfg = config || {};
   const title = cfg.title || 'Practice';
   const note = cfg.note || '';
   const className = cfg.className || '';
   const subset = (lesson.practiceItems || []).slice(startIndex, endIndex);
-
   if (!subset.length) {
     return '';
   }
-
   const practiceHtml = subset.map(function (item, offset) {
     return renderPracticeItemHtml_(item, startIndex + offset, teacherView, forPrint);
   }).join('');
-
   return `
     <section class="practice-section ${className}">
       <h2 class="section-title">${escapeHtml_(title)}</h2>
@@ -2171,12 +1954,10 @@ function renderPracticeGroupSection_(lesson, teacherView, forPrint, config, star
     </section>
   `;
 }
-
 function renderTeacherNotesSection_(lesson, teacherView) {
   if (!teacherView || !lesson.teacherNotes || !lesson.teacherNotes.length) {
     return '';
   }
-
   return `
     <section>
       <h2 class="section-title">Teacher Notes</h2>
@@ -2190,15 +1971,12 @@ function renderTeacherNotesSection_(lesson, teacherView) {
     </section>
   `;
 }
-
 function renderAnswerKeySection_(lesson, teacherView) {
   if (!teacherView || !lesson.practiceItems || !lesson.practiceItems.length) {
     return '';
   }
-
   const answerKeyHtml = lesson.practiceItems.map(function (item, index) {
     const answers = (item.acceptedAnswers || []).join(' | ');
-
     return `
       <article class="answer-key-item">
         <div class="answer-key-number">Item ${index + 1}</div>
@@ -2210,7 +1988,6 @@ function renderAnswerKeySection_(lesson, teacherView) {
       </article>
     `;
   }).join('');
-
   return `
     <section>
       <h2 class="section-title">Answer Key</h2>
@@ -2221,15 +1998,12 @@ function renderAnswerKeySection_(lesson, teacherView) {
     </section>
   `;
 }
-
 function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
   const answerText = item.acceptedAnswers.join(' | ');
   let controlsHtml = '';
-
   if (item.type === 'multiple-choice') {
     const optionMarkup = item.options.map(function (option, optionIndex) {
       const letter = String.fromCharCode(65 + optionIndex);
-
       return `
         <label class="mc-choice">
           <input type="radio" name="practice_${index}" value="${escapeHtml_(option)}">
@@ -2238,13 +2012,12 @@ function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
         </label>
       `;
     }).join('');
-
     controlsHtml = forPrint
       ? `
         <div class="option-preview">
           ${item.options.map(function (option, optionIndex) {
-            return `<div class="option-line"><strong>${String.fromCharCode(65 + optionIndex)}.</strong> ${escapeHtml_(option)}</div>`;
-          }).join('')}
+        return `<div class="option-line"><strong>${String.fromCharCode(65 + optionIndex)}.</strong> ${escapeHtml_(option)}</div>`;
+      }).join('')}
         </div>
         <div class="print-answer-space"></div>
       `
@@ -2284,7 +2057,6 @@ function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
         </div>
       `;
   }
-
   return `
     <article class="card practice-card" data-practice-index="${index}">
       <div class="practice-number">Item ${index + 1} • ${escapeHtml_(item.type)}</div>
@@ -2292,36 +2064,419 @@ function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
       ${controlsHtml}
       ${forPrint ? '' : `<div id="feedback_${index}" class="feedback"></div>`}
       ${teacherView
-        ? `<div class="teacher-answer-box">
+      ? `<div class="teacher-answer-box">
             <strong>Accepted answer(s):</strong> <span class="editable" data-practice-field="answers">${escapeHtml_(answerText)}</span>
             ${item.hint ? `<div class="hint-line"><strong>Hint:</strong> <span class="editable" data-practice-field="hint">${escapeHtml_(item.hint)}</span></div>` : ''}
           </div>`
-        : `<div id="answer_${index}" class="answer-reveal hidden">
+      : `<div id="answer_${index}" class="answer-reveal hidden">
             <strong>Accepted answer(s):</strong> ${escapeHtml_(answerText)}
             ${item.hint ? `<div class="hint-line"><strong>Hint:</strong> ${escapeHtml_(item.hint)}</div>` : ''}
           </div>`
-      }
+    }
     </article>
   `;
 }
-
 /***************************************
- * 10. PRINT DOCUMENT BUILD
+ * 10. NEW DEDICATED PRINT RENDERING SYSTEM
+ ***************************************/
+/***************************************
+ * 10. DEDICATED PRINT PATH (content now 100% identical to preview)
+ ***************************************/
+function renderPrintableLessonHtml_(lesson, options) {
+  const opts = options || {};
+  const copyMode = normalizeEnum_(opts.copyMode, PREVIEW_MODES, 'STUDENT');
+  const teacherView = copyMode === 'TEACHER';
+  const headerInfo = opts.headerInfo || {};
+  const templateType = normalizeEnum_(lesson.templateType, TEMPLATE_TYPES, DEFAULT_TEMPLATE);
+
+  const headerHtml = renderPrintHeaderHtml_(lesson, teacherView, headerInfo);
+
+  // This line forces the EXACT same content as the live preview
+  const bodyHtml = renderTemplateBody_(lesson, {
+    teacherView: teacherView,
+    forPrint: true,
+    templateType: templateType
+  });
+
+  const answerKeyHtml = teacherView ? renderAnswerKeySection_(lesson, teacherView) : '';
+
+  return `
+    <div class="print-lesson-sheet" data-template="${escapeHtml_(templateType)}" data-copy-mode="${copyMode}">
+      ${headerHtml}
+      ${bodyHtml}
+      ${answerKeyHtml}
+    </div>
+  `;
+}
+
+function renderPrintHeaderHtml_(lesson, teacherView, headerInfo) {
+  return `
+    <header class="print-lesson-header">
+      <div class="print-doc-banner">
+        ${headerInfo.schoolName ? `<div class="print-school-name">${escapeHtml_(headerInfo.schoolName)}</div>` : ''}
+        ${headerInfo.customHeader ? `<div class="print-custom-header">${escapeHtml_(headerInfo.customHeader)}</div>` : ''}
+      </div>
+      <div class="print-eyebrow">${teacherView ? 'Teacher Copy' : 'Student Copy'}</div>
+      <h1 class="print-lesson-title">${escapeHtml_(lesson.title)}</h1>
+      <div class="print-header-grid">
+        <div class="print-meta-column"><div class="print-meta-label">Subject</div><div class="print-meta-value">${escapeHtml_(lesson.subject)}</div></div>
+        <div class="print-meta-column"><div class="print-meta-label">Grade Level</div><div class="print-meta-value">${escapeHtml_(lesson.gradeLevel)}</div></div>
+        <div class="print-meta-column"><div class="print-meta-label">Topic</div><div class="print-meta-value">${escapeHtml_(lesson.topic)}</div></div>
+        <div class="print-meta-column"><div class="print-meta-label">Template</div><div class="print-meta-value">${escapeHtml_(prettyEnum_(lesson.templateType))}</div></div>
+        <div class="print-meta-column"><div class="print-meta-label">Difficulty</div><div class="print-meta-value">${escapeHtml_(prettyEnum_(lesson.difficulty))}</div></div>
+        <div class="print-meta-column"><div class="print-meta-label">Quarter</div><div class="print-meta-value">${escapeHtml_(headerInfo.quarter || '')}</div></div>
+        <div class="print-teacher-full-row"><div class="print-meta-label">Teacher Name</div><div class="print-meta-value">${escapeHtml_(headerInfo.teacherName || '')}</div></div>
+      </div>
+    </header>
+  `;
+}
+
+function renderPrintTemplateBody_(lesson, options) {
+  const opts = options || {};
+  const teacherView = !!opts.teacherView;
+  const templateType = normalizeEnum_(opts.templateType || lesson.templateType, TEMPLATE_TYPES, DEFAULT_TEMPLATE);
+  const printRenderers = {
+    CONCEPT: renderPrintConceptTemplate_,
+    GUIDED_PRACTICE: renderPrintGuidedPracticeTemplate_,
+    REVIEW: renderPrintReviewTemplate_,
+    QUIZ: renderPrintQuizTemplate_,
+    REMEDIATION: renderPrintRemediationTemplate_,
+    ENRICHMENT: renderPrintEnrichmentTemplate_
+  };
+  return (printRenderers[templateType] || renderPrintConceptTemplate_)(lesson, teacherView);
+}
+function renderPrintConceptTemplate_(lesson, teacherView) {
+  return [
+    renderObjectiveSection_(lesson),
+    renderSuccessCriteriaSection_(lesson),
+    renderVocabularySection_(lesson, false),
+    renderSummarySection_(lesson, 'Lesson Overview'),
+    renderPrintFullConceptSection_(lesson),
+    renderPrintPracticeSection_(lesson, teacherView),
+    renderTeacherNotesSection_(lesson, teacherView)
+  ].join('');
+}
+function renderPrintGuidedPracticeTemplate_(lesson, teacherView) {
+  return [
+    renderObjectiveSection_(lesson),
+    renderSuccessCriteriaSection_(lesson),
+    renderVocabularySection_(lesson, true),
+    renderGuidedPracticeFocusSection_(lesson),
+    renderPrintGuidedPracticeLearnSection_(lesson),
+    renderGuidedPracticeModelSection_(lesson),
+    renderPrintPracticeSection_(lesson, teacherView),
+    renderTeacherNotesSection_(lesson, teacherView)
+  ].join('');
+}
+function renderPrintReviewTemplate_(lesson, teacherView) {
+  return [
+    renderObjectiveSection_(lesson),
+    renderSuccessCriteriaSection_(lesson),
+    renderVocabularySection_(lesson, true),
+    renderReviewFocusSection_(lesson),
+    renderPrintReviewConceptSection_(lesson),
+    renderPrintPracticeSection_(lesson, teacherView),
+    renderTeacherNotesSection_(lesson, teacherView)
+  ].join('');
+}
+function renderPrintQuizTemplate_(lesson, teacherView) {
+  return [
+    teacherView ? renderPrintQuizTeacherOverviewSection_(lesson) : '',
+    renderPrintQuizInfoSection_(),
+    renderPrintQuizDirectionsSection_(teacherView),
+    renderPrintPracticeSection_(lesson, teacherView, { compact: true }),
+    renderTeacherNotesSection_(lesson, teacherView)
+  ].join('');
+}
+function renderPrintRemediationTemplate_(lesson, teacherView) {
+  return [
+    renderObjectiveSection_(lesson),
+    renderSuccessCriteriaSection_(lesson),
+    renderVocabularySection_(lesson, true),
+    renderRemediationFocusSection_(lesson),
+    renderPrintRemediationUnderstandBlocks_(lesson),
+    renderPrintRemediationFollowSection_(lesson),
+    renderPrintPracticeGroupSection_(lesson, teacherView, { title: 'TRY WITH HELP', className: 'try-help-section' }, 0, Math.ceil(lesson.practiceItems.length / 2)),
+    renderPrintPracticeGroupSection_(lesson, teacherView, { title: 'CHECK YOURSELF', className: 'check-yourself-section' }, Math.ceil(lesson.practiceItems.length / 2), lesson.practiceItems.length),
+    renderTeacherNotesSection_(lesson, teacherView)
+  ].join('');
+}
+function renderPrintEnrichmentTemplate_(lesson, teacherView) {
+  return [
+    renderObjectiveSection_(lesson),
+    renderSuccessCriteriaSection_(lesson),
+    renderVocabularySection_(lesson, true),
+    renderEnrichmentRecallSection_(lesson),
+    renderPrintEnrichmentThinkDeeperBlocks_(lesson),
+    renderPrintPracticeGroupSection_(lesson, teacherView, { title: 'CHALLENGE', className: 'challenge-section' }, 0, Math.ceil(lesson.practiceItems.length / 2)),
+    renderPrintPracticeGroupSection_(lesson, teacherView, { title: 'TRANSFER', className: 'transfer-section' }, Math.ceil(lesson.practiceItems.length / 2), lesson.practiceItems.length),
+    renderTeacherNotesSection_(lesson, teacherView)
+  ].join('');
+}
+function renderPrintFullConceptSection_(lesson) {
+  const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
+    return `
+      <article class="print-concept-card print-keep-together" data-concept-index="${index}">
+        <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
+        <div class="concept-summary">${escapeHtml_(item.summary)}</div>
+        ${item.formula ? `<div class="formula-box"><div class="formula-label">Formula</div><div class="formula-value">${escapeHtml_(item.formula)}</div></div>` : ''}
+        <div class="sub-card"><div class="sub-card-label">Meaning of Symbols / Important Terms</div><div>${escapeHtml_(item.symbolMeaning)}</div></div>
+        <div class="example-box"><strong>Worked Example:</strong><div>${escapeHtml_(item.workedExample)}</div></div>
+        ${item.misconception ? `<div class="misconception-box"><strong>Common Misconception:</strong><div>${escapeHtml_(item.misconception)}</div></div>` : ''}
+      </article>
+    `;
+  }).join('');
+  return `
+    <section>
+      <h2 class="section-title">Key Concepts</h2>
+      <div class="section-note">Use these explanations and examples for direct instruction.</div>
+      ${conceptsHtml}
+    </section>
+  `;
+}
+function renderPrintGuidedPracticeLearnSection_(lesson) {
+  const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
+    return `
+      <article class="print-guided-learn-card print-keep-together" data-concept-index="${index}">
+        <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
+        <div class="guided-summary-box"><div class="concept-summary">${escapeHtml_(item.summary)}</div></div>
+        ${item.formula ? `<div class="mini-formula-box"><div class="mini-label">Useful Formula / Rule</div><div class="formula-value">${escapeHtml_(item.formula)}</div></div>` : ''}
+        <div class="guided-symbol-box"><div class="sub-card-label">Key Terms and Symbols</div><div class="compact-note">${escapeHtml_(item.symbolMeaning)}</div></div>
+        ${item.misconception ? `<div class="misconception-box"><strong>Watch Out:</strong><div>${escapeHtml_(item.misconception)}</div></div>` : ''}
+      </article>
+    `;
+  }).join('');
+  return `
+    <section>
+      <h2 class="section-title">LEARN</h2>
+      <div class="section-note">Study the key ideas, formula or rule, important terms, and the common error to avoid.</div>
+      ${conceptsHtml}
+    </section>
+  `;
+}
+function renderPrintReviewConceptSection_(lesson) {
+  const conceptsHtml = lesson.keyConcepts.map(function (item, index) {
+    return `
+      <article class="print-review-mini-card print-keep-together" data-concept-index="${index}">
+        <div class="review-mini-title">QUICK REMINDER</div>
+        <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
+        <div class="concept-summary">${escapeHtml_(item.summary)}</div>
+        ${item.formula ? `<div class="review-rule-box"><div class="mini-label">Formula / Rule</div><div class="formula-value">${escapeHtml_(item.formula)}</div></div>` : ''}
+        <div class="review-reminder-box"><div class="sub-card-label">Remember This</div><div class="compact-note">${escapeHtml_(item.symbolMeaning)}</div></div>
+        ${item.misconception ? `<div class="misconception-box"><strong>Common Error:</strong><div>${escapeHtml_(item.misconception)}</div></div>` : ''}
+      </article>
+    `;
+  }).join('');
+  return `
+    <section>
+      <h2 class="section-title">QUICK REMINDERS</h2>
+      <div class="section-note">Scan these reminders first, then answer the review items.</div>
+      ${conceptsHtml}
+    </section>
+  `;
+}
+function renderPrintRemediationUnderstandBlocks_(lesson) {
+  const blocks = lesson.keyConcepts.map(function (item, index) {
+    return `
+      <article class="print-remediation-block print-keep-together">
+        <div class="remediation-model-title">UNDERSTAND</div>
+        <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
+        <div class="concept-summary">${escapeHtml_(item.summary)}</div>
+        ${item.formula ? `<div class="mini-formula-box"><div class="mini-label">Rule / Formula</div><div class="formula-value">${escapeHtml_(item.formula)}</div></div>` : ''}
+        <div class="remediation-help-box"><div class="sub-card-label">Helpful Terms and Symbols</div><div class="compact-note">${escapeHtml_(item.symbolMeaning)}</div></div>
+        ${item.misconception ? `<div class="misconception-box"><strong>Watch Out:</strong><div>${escapeHtml_(item.misconception)}</div></div>` : ''}
+      </article>
+    `;
+  }).join('');
+  return `
+    <section>
+      <h2 class="section-title">UNDERSTAND</h2>
+      <div class="section-note">Study the idea first. Focus on the rule, the key terms, and the common mistake to avoid.</div>
+      ${blocks}
+    </section>
+  `;
+}
+function renderPrintRemediationFollowSection_(lesson) {
+  const modelsHtml = lesson.keyConcepts.map(function (item, index) {
+    return `
+      <article class="print-remediation-model-card print-keep-together">
+        <div class="remediation-model-title">FOLLOW THE EXAMPLE</div>
+        <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
+        <div class="example-box"><div>${escapeHtml_(item.workedExample)}</div></div>
+      </article>
+    `;
+  }).join('');
+  return `
+    <section>
+      <h2 class="section-title">FOLLOW</h2>
+      <div class="section-note">Use these worked examples as step-by-step guides before answering on your own.</div>
+      ${modelsHtml}
+    </section>
+  `;
+}
+function renderPrintEnrichmentThinkDeeperBlocks_(lesson) {
+  const blocks = lesson.keyConcepts.map(function (item, index) {
+    return `
+      <article class="print-enrichment-block print-keep-together">
+        <div class="enrichment-card-title">THINK DEEPER</div>
+        <h3 class="concept-title">${escapeHtml_(item.heading)}</h3>
+        <div class="concept-summary">${escapeHtml_(item.summary)}</div>
+        ${item.formula ? `<div class="review-rule-box"><div class="mini-label">Key Rule / Relationship</div><div class="formula-value">${escapeHtml_(item.formula)}</div></div>` : ''}
+        <div class="enrichment-note-box"><div class="sub-card-label">Big Idea to Keep in Mind</div><div class="compact-note">${escapeHtml_(item.symbolMeaning)}</div></div>
+        ${item.misconception ? `<div class="misconception-box"><strong>Avoid This Shortcut Error:</strong><div>${escapeHtml_(item.misconception)}</div></div>` : ''}
+      </article>
+    `;
+  }).join('');
+  return `
+    <section>
+      <h2 class="section-title">THINK DEEPER</h2>
+      <div class="section-note">Review the big ideas first, then use them in more demanding and less familiar tasks.</div>
+      ${blocks}
+    </section>
+  `;
+}
+function renderPrintPracticeSection_(lesson, teacherView, config) {
+  const cfg = config || {};
+  const compact = !!cfg.compact;
+  const title = cfg.title || 'Individual Practice';
+  const note = cfg.note || (teacherView ? 'Teacher view shows accepted answers and hints.' : 'Answer all items.');
+  const practiceHtml = lesson.practiceItems.map(function (item, index) {
+    return renderPrintPracticeItemHtml_(item, index, teacherView, compact);
+  }).join('');
+  return `
+    <section class="practice-section ${compact ? 'print-compact' : ''}">
+      <h2 class="section-title">${escapeHtml_(title)}</h2>
+      <div class="section-note">${escapeHtml_(note)}</div>
+      ${practiceHtml}
+    </section>
+  `;
+}
+function renderPrintPracticeGroupSection_(lesson, teacherView, config, startIndex, endIndex) {
+  const cfg = config || {};
+  const title = cfg.title || 'Practice';
+  const className = cfg.className || '';
+  const subset = (lesson.practiceItems || []).slice(startIndex, endIndex);
+  if (!subset.length) return '';
+  const practiceHtml = subset.map(function (item, offset) {
+    return renderPrintPracticeItemHtml_(item, startIndex + offset, teacherView, true);
+  }).join('');
+  return `
+    <section class="practice-section ${className}">
+      <h2 class="section-title">${escapeHtml_(title)}</h2>
+      ${practiceHtml}
+    </section>
+  `;
+}
+function renderPrintPracticeItemHtml_(item, index, teacherView, compact) {
+  const answerText = item.acceptedAnswers.join(' | ');
+  let controlsHtml = '';
+  if (item.type === 'multiple-choice') {
+    controlsHtml = `
+      <div class="option-preview">
+        ${item.options.map(function (option, optionIndex) {
+      return `<div class="option-line"><strong>${String.fromCharCode(65 + optionIndex)}.</strong> ${escapeHtml_(option)}</div>`;
+    }).join('')}
+      </div>
+      <div class="print-answer-space"></div>
+    `;
+  } else if (item.type === 'true-false') {
+    controlsHtml = `<div class="print-answer-space"></div>`;
+  } else {
+    controlsHtml = `<div class="print-answer-space lines-2"></div>`;
+  }
+  return `
+    <article class="print-practice-card ${compact ? 'print-compact-card' : ''}" data-practice-index="${index}">
+      <div class="practice-number">Item ${index + 1} • ${escapeHtml_(item.type)}</div>
+      <div class="practice-question">${escapeHtml_(item.question)}</div>
+      ${controlsHtml}
+      ${teacherView ? `
+        <div class="teacher-answer-box">
+          <strong>Accepted answer(s):</strong> ${escapeHtml_(answerText)}
+          ${item.hint ? `<div class="hint-line"><strong>Hint:</strong> ${escapeHtml_(item.hint)}</div>` : ''}
+        </div>
+      ` : ''}
+    </article>
+  `;
+}
+function renderPrintQuizTeacherOverviewSection_(lesson) {
+  return `
+    <section>
+      <h2 class="section-title">Assessment Focus</h2>
+      <div class="quiz-focus-card">
+        <div class="quiz-focus-title">Objective</div>
+        <div class="quiz-focus-text">${escapeHtml_(lesson.objective)}</div>
+      </div>
+    </section>
+  `;
+}
+function renderPrintQuizInfoSection_() {
+  return `
+    <section>
+      <h2 class="section-title">Student Information</h2>
+      <div class="quiz-info-card">
+        <div class="quiz-meta-lines">
+          <div class="quiz-line"><span class="quiz-line-label">Name</span><span class="quiz-line-fill"></span></div>
+          <div class="quiz-line"><span class="quiz-line-label">Date</span><span class="quiz-line-fill"></span></div>
+          <div class="quiz-line"><span class="quiz-line-label">Score</span><span class="quiz-line-fill"></span></div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+function renderPrintQuizDirectionsSection_(teacherView) {
+  return `
+    <section>
+      <h2 class="section-title">Directions</h2>
+      <div class="directions-box">
+        ${teacherView ? 'Use this copy as the checking and reference version of the assessment.' : 'Read each item carefully and answer the questions independently.'}
+        <ul class="directions-list">
+          <li>Answer every question.</li>
+          <li>Work neatly and review your answers before submitting.</li>
+        </ul>
+      </div>
+    </section>
+  `;
+}
+function renderPrintAnswerKeySection_(lesson) {
+  const answerKeyHtml = lesson.practiceItems.map(function (item, index) {
+    const answers = (item.acceptedAnswers || []).join(' | ');
+    return `
+      <article class="answer-key-item print-keep-together">
+        <div class="answer-key-number">Item ${index + 1}</div>
+        <div class="answer-key-question">${escapeHtml_(item.question || '')}</div>
+        <div class="answer-key-response"><strong>Accepted answer(s):</strong> ${escapeHtml_(answers)}</div>
+        ${item.hint ? `<div class="answer-key-hint"><strong>Hint:</strong> ${escapeHtml_(item.hint)}</div>` : ''}
+      </article>
+    `;
+  }).join('');
+  return `
+    <section>
+      <h2 class="section-title">Answer Key</h2>
+      <div class="section-note">Use this section for quick checking and reference across all practice items.</div>
+      <div class="answer-key-list">
+        ${answerKeyHtml}
+      </div>
+    </section>
+  `;
+}
+/***************************************
+ * 11. PRINT DOCUMENT BUILD
  ***************************************/
 function buildPrintableDocument_(bodyHtml, options) {
   const opts = options || {};
   const footerText = opts.footerText || APP_TITLE;
   const documentTitle = opts.documentTitle || APP_TITLE;
-
   return `
     <!DOCTYPE html>
     <html>
       <head>
         <meta charset="utf-8">
         <title>${escapeHtml_(documentTitle)}</title>
-
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
         <style>
+          ${getPrintDesignTokensCss_()}
+          ${getPrintBaseStyles_()}
+          ${getPrintTemplateStyles_()}
           ${getSharedStyles_()}
           ${getPrintStyles_(footerText)}
         </style>
@@ -2330,17 +2485,14 @@ function buildPrintableDocument_(bodyHtml, options) {
         <div class="print-doc">
           ${bodyHtml}
         </div>
-
         <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-
         <script>
           function renderMathForPrint() {
             if (typeof renderMathInElement !== 'function') {
               window.setTimeout(renderMathForPrint, 150);
               return;
             }
-
             renderMathInElement(document.body, {
               delimiters: [
                 { left: '\\\\[', right: '\\\\]', display: true },
@@ -2348,7 +2500,6 @@ function buildPrintableDocument_(bodyHtml, options) {
               ],
               throwOnError: false
             });
-
             Promise.resolve(document.fonts ? document.fonts.ready : null).then(function () {
               window.requestAnimationFrame(function () {
                 window.requestAnimationFrame(function () {
@@ -2357,7 +2508,6 @@ function buildPrintableDocument_(bodyHtml, options) {
               });
             });
           }
-
           window.addEventListener('load', function () {
             window.setTimeout(renderMathForPrint, 180);
           });
@@ -2366,7 +2516,72 @@ function buildPrintableDocument_(bodyHtml, options) {
     </html>
   `;
 }
+function getPrintDesignTokensCss_() {
+  return `
+    .print-lesson-sheet {
+      --template-accent:#0052cc;
+      --template-accent-dark:#0f2747;
+      --template-soft-bg:#f5f9ff;
+      --template-soft-border:#d9e6ff;
+      --template-subtle-bg:#fafcff;
+      --template-subtle-border:#e5ebf5;
+    }
+    .print-lesson-sheet[data-template="GUIDED_PRACTICE"] {--template-accent:#0f766e;--template-accent-dark:#134e4a;--template-soft-bg:#f0fdfa;--template-soft-border:#99f6e4;}
+    .print-lesson-sheet[data-template="REVIEW"] {--template-accent:#7c3aed;--template-accent-dark:#4c1d95;--template-soft-bg:#f5f3ff;--template-soft-border:#ddd6fe;}
+    .print-lesson-sheet[data-template="QUIZ"] {--template-accent:#c2410c;--template-accent-dark:#7c2d12;--template-soft-bg:#fff7ed;--template-soft-border:#fed7aa;}
+    .print-lesson-sheet[data-template="REMEDIATION"] {--template-accent:#be185d;--template-accent-dark:#831843;--template-soft-bg:#fff1f2;--template-soft-border:#fecdd3;}
+    .print-lesson-sheet[data-template="ENRICHMENT"] {--template-accent:#047857;--template-accent-dark:#064e3b;--template-soft-bg:#ecfdf5;--template-soft-border:#a7f3d0;}
+  `;
+}
+function getPrintBaseStyles_() {
+  return `
+    @page { size: Letter portrait; margin: 0.75in 0.75in 1in 0.75in; @bottom-center { content: attr(data-footer); font-size:10px; color:#666; border-top:1px solid #ddd; padding-top:6px; } }
+    .print-lesson-sheet { width:100%; max-width:none; padding:0; margin:0 auto; font-family:Arial,Helvetica,sans-serif; }
+    .print-header-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:12px; }
+    .print-teacher-full-row { grid-column:1/-1; }
+    .print-meta-column { background:var(--template-soft-bg); border:1px solid var(--template-soft-border); border-radius:12px; padding:10px 12px; }
+    .print-meta-label { font-size:10px; font-weight:700; text-transform:uppercase; color:#5b6b82; margin-bottom:4px; }
+    .print-meta-value { font-size:13px; font-weight:600; color:#1c2e45; }
+    .print-lesson-header { background:#ffffff; border:1px solid #dfe3eb; border-top:5px solid var(--template-accent); border-radius:18px; padding:16px; margin-bottom:14px; }
+    .print-doc-banner { margin-bottom:12px; }
+    .print-school-name { font-size:15px; font-weight:700; color:var(--template-accent-dark); margin-bottom:4px; }
+    .print-custom-header { font-size:12px; color:#5b6b82; margin-bottom:8px; }
+    .print-eyebrow { font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--template-accent); margin-bottom:8px; }
+    .print-lesson-title { margin:0; font-size:26px; line-height:1.2; color:var(--template-accent-dark); }
+    .print-concept-card, .print-guided-learn-card, .print-review-mini-card, .print-remediation-block, .print-enrichment-block, .print-practice-card { break-inside:avoid; page-break-inside:avoid; margin-bottom:14px; background:#fff; border:1px solid var(--template-soft-border); border-radius:16px; padding:14px; }
+    .print-compact-card { padding:10px; margin-bottom:8px; }
+    .print-keep-together { break-inside:avoid; page-break-inside:avoid; }
+    .print-flow { break-inside:auto; }
+    .print-compact { padding:8px !important; }
+  `;
+}
+function getPrintTemplateStyles_() {
+  return `
+    .print-lesson-sheet[data-template="QUIZ"] .print-practice-card { padding:8px; margin-bottom:8px; }
+    .print-lesson-sheet[data-template="QUIZ"] .option-preview { margin-bottom:8px; }
+    .print-lesson-sheet[data-template="REMEDIATION"] .print-remediation-block, .print-lesson-sheet[data-template="ENRICHMENT"] .print-enrichment-block { margin-bottom:12px; }
+  `;
+}
+function getPrintStyles_(footerText) {
+  const safeFooter = escapeCssString_(footerText || APP_TITLE);
+  return [
+    '@page { size: Letter portrait; margin: 0.75in 0.75in 1in 0.75in; @bottom-center { content: "' + safeFooter + '"; font-size: 10px; color: #666; border-top: 1px solid #ddd; padding-top: 6px; } }',
+    'html, body.print-mode { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background: #fff !important; color: #000 !important; }',
+    'body.print-mode .print-lesson-sheet { width: 100%; max-width: none; padding: 0; margin: 0 auto; }',
 
+    /* FORCE ALL TEXT SECTIONS TO SHOW AND ALLOW SPLITTING */
+    'body.print-mode .editable, body.print-mode .objective-text, body.print-mode .summary-text, body.print-mode .concept-summary, body.print-mode .vocab-definition, body.print-mode .criteria-list { display: block !important; visibility: visible !important; }',
+    'body.print-mode .card, body.print-mode .print-concept-card { break-inside: auto !important; page-break-inside: auto !important; }',
+
+    /* Make Objective, Success Criteria, Vocabulary, Lesson Overview, Key Concepts split-friendly */
+    'body.print-mode section:has(.objective-text), body.print-mode section:has(.criteria-list), body.print-mode section:has(.vocab-grid), body.print-mode section:has(.summary-text), body.print-mode section:has(.concept-summary) { break-inside: auto !important; }',
+
+    'body.print-mode .section-title, body.print-mode .section-note { page-break-after: avoid !important; break-after: avoid !important; }',
+    'body.print-mode .print-keep-together { break-inside: avoid !important; page-break-inside: avoid !important; }',
+    'body.print-mode .print-flow { break-inside: auto !important; }',
+    'body.print-mode .btn, body.print-mode .feedback, body.print-mode .editable.active-edit { display: none !important; }'
+  ].join('\n');
+}
 function getSharedStyles_() {
   return [
     '*{box-sizing:border-box;}',
@@ -2380,330 +2595,8 @@ function getSharedStyles_() {
     '.pdf-footnote{display:none;}'
   ].join('');
 }
-
-function getPrintStyles_(footerText) {
-  const safeFooter = escapeCssString_(footerText || APP_TITLE);
-
-  return [
-    '@page {',
-    '  size: Letter portrait;',
-    '  margin: 0.75in 0.75in 1in 0.75in;',
-    '  @bottom-center {',
-    '    content: "' + safeFooter + '";',
-    '    font-size: 10px;',
-    '    color: #666;',
-    '    border-top: 1px solid #ddd;',
-    '    padding-top: 6px;',
-    '  }',
-    '}',
-
-    'html, body.print-mode {',
-    '  -webkit-print-color-adjust: exact !important;',
-    '  print-color-adjust: exact !important;',
-    '  background: #fff !important;',
-    '  color: #000 !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet {',
-    '  width: 100%;',
-    '  max-width: none;',
-    '  padding: 0;',
-    '  margin: 0 auto;',
-    '}',
-
-    'body.print-mode .lesson-header,',
-    'body.print-mode .section-title,',
-    'body.print-mode .section-note,',
-    'body.print-mode .preview-title {',
-    '  page-break-after: avoid !important;',
-    '  break-after: avoid !important;',
-    '}',
-
-    'body.print-mode .section-title {',
-    '  margin: 18px 0 4px !important;',
-    '  font-size: 17px !important;',
-    '}',
-
-    'body.print-mode .section-note {',
-    '  margin-bottom: 10px !important;',
-    '  font-size: 12px !important;',
-    '  line-height: 1.45 !important;',
-    '}',
-
-    'body.print-mode .card,',
-    'body.print-mode .practice-card,',
-    'body.print-mode .concept-card,',
-    'body.print-mode .guided-learn-card,',
-    'body.print-mode .guided-example-card,',
-    'body.print-mode .review-mini-card,',
-    'body.print-mode .quick-review-card,',
-    'body.print-mode .remediation-model-card,',
-    'body.print-mode .answer-key-item,',
-    'body.print-mode .quiz-info-card,',
-    'body.print-mode .quiz-focus-card {',
-    '  break-inside: avoid !important;',
-    '  page-break-inside: avoid !important;',
-    '  margin-bottom: 12px !important;',
-    '}',
-
-    'body.print-mode .print-concept-flow {',
-    '  background: #fff;',
-    '  border: 1px solid var(--template-soft-border);',
-    '  border-left: 5px solid var(--template-accent);',
-    '  border-radius: 16px;',
-    '  padding: 14px 16px;',
-    '  margin-bottom: 12px;',
-    '  box-shadow: none;',
-    '}',
-
-    'body.print-mode .concept-summary,',
-    'body.print-mode .example-box,',
-    'body.print-mode .guided-transition-note,',
-    'body.print-mode .objective-text,',
-    'body.print-mode .summary-text,',
-    'body.print-mode .practice-question,',
-    'body.print-mode .vocab-definition,',
-    'body.print-mode .teacher-answer-box,',
-    'body.print-mode .answer-reveal,',
-    'body.print-mode .compact-note,',
-    'body.print-mode .quiz-focus-text,',
-    'body.print-mode .answer-key-question,',
-    'body.print-mode .answer-key-response,',
-    'body.print-mode p,',
-    'body.print-mode li {',
-    '  font-size: 12px;',
-    '  line-height: 1.5;',
-    '  white-space: pre-line;',
-    '  overflow-wrap: anywhere;',
-    '  word-break: break-word;',
-    '  orphans: 3 !important;',
-    '  widows: 3 !important;',
-    '}',
-
-    'body.print-mode .formula-box,',
-    'body.print-mode .mini-formula-box,',
-    'body.print-mode .review-rule-box,',
-    'body.print-mode .guided-summary-box,',
-    'body.print-mode .guided-symbol-box,',
-    'body.print-mode .review-reminder-box,',
-    'body.print-mode .remediation-help-box,',
-    'body.print-mode .enrichment-note-box,',
-    'body.print-mode .misconception-box,',
-    'body.print-mode .teacher-answer-box,',
-    'body.print-mode .option-preview,',
-    'body.print-mode .directions-box {',
-    '  break-inside: avoid !important;',
-    '  page-break-inside: avoid !important;',
-    '}',
-
-    'body.print-mode .katex-display,',
-    'body.print-mode .formula-value {',
-    '  break-inside: avoid !important;',
-    '  page-break-inside: avoid !important;',
-    '}',
-
-    'body.print-mode .btn,',
-    'body.print-mode .feedback,',
-    'body.print-mode .answer-reveal.hidden,',
-    'body.print-mode .editable.active-edit {',
-    '  display: none !important;',
-    '}',
-
-    'body.print-mode .vocab-grid,',
-    'body.print-mode .review-grid,',
-    'body.print-mode .guided-stage-grid,',
-    'body.print-mode .review-list {',
-    '  display: block !important;',
-    '}',
-
-    'body.print-mode .print-lesson-header {',
-    '  padding: 14px 16px !important;',
-    '  margin-bottom: 12px !important;',
-    '}',
-
-    'body.print-mode .print-lesson-header .doc-banner {',
-    '  margin-bottom: 10px !important;',
-    '}',
-
-    'body.print-mode .print-lesson-header .eyebrow {',
-    '  margin-bottom: 6px !important;',
-    '}',
-
-    'body.print-mode .print-lesson-header .lesson-title {',
-    '  font-size: 24px !important;',
-    '  line-height: 1.15 !important;',
-    '  margin: 0 !important;',
-    '}',
-
-    'body.print-mode .print-meta-grid {',
-    '  display: grid !important;',
-    '  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;',
-    '  grid-auto-flow: row !important;',
-    '  align-items: stretch !important;',
-    '  gap: 10px !important;',
-    '  margin-top: 14px !important;',
-    '}',
-
-    'body.print-mode .print-meta-grid .meta-card {',
-    '  display: block !important;',
-    '  min-width: 0 !important;',
-    '  background: var(--template-soft-bg) !important;',
-    '  border: 1px solid var(--template-soft-border) !important;',
-    '  border-radius: 12px !important;',
-    '  padding: 10px 12px !important;',
-    '  break-inside: avoid !important;',
-    '  page-break-inside: avoid !important;',
-    '}',
-
-    'body.print-mode .print-meta-grid .meta-card-wide {',
-    '  grid-column: 1 / -1 !important;',
-    '}',
-
-    'body.print-mode .print-meta-grid .meta-label {',
-    '  display: block !important;',
-    '  font-size: 10px !important;',
-    '  margin-bottom: 3px !important;',
-    '}',
-
-    'body.print-mode .print-meta-grid .meta-value {',
-    '  display: block !important;',
-    '  font-size: 13px !important;',
-    '}',
-
-    '@media print {',
-    '  .print-meta-grid {',
-    '    display: grid !important;',
-    '    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;',
-    '    grid-auto-flow: row !important;',
-    '    gap: 10px !important;',
-    '    margin-top: 14px !important;',
-    '  }',
-    '  .print-meta-grid .meta-card {',
-    '    display: block !important;',
-    '    min-width: 0 !important;',
-    '    background: var(--template-soft-bg) !important;',
-    '    border: 1px solid var(--template-soft-border) !important;',
-    '    border-radius: 12px !important;',
-    '    padding: 10px 12px !important;',
-    '  }',
-    '  .print-meta-grid .meta-card-wide {',
-    '    grid-column: 1 / -1 !important;',
-    '  }',
-    '  .print-meta-grid .meta-label,',
-    '  .print-meta-grid .meta-value {',
-    '    display: block !important;',
-    '  }',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .quiz-info-card,',
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .quiz-focus-card,',
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .directions-box {',
-    '  padding: 10px 12px !important;',
-    '  margin-bottom: 10px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .quiz-meta-lines {',
-    '  display: grid !important;',
-    '  grid-template-columns: 1.6fr 0.8fr 0.8fr !important;',
-    '  gap: 10px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .quiz-line {',
-    '  min-height: 22px !important;',
-    '  gap: 6px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .quiz-line-label {',
-    '  font-size: 10px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .quiz-line-fill {',
-    '  height: 16px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .practice-card {',
-    '  padding: 12px 14px !important;',
-    '  margin-bottom: 8px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .practice-number {',
-    '  margin-bottom: 6px !important;',
-    '  font-size: 10px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .practice-question {',
-    '  margin-bottom: 8px !important;',
-    '  font-size: 14px !important;',
-    '  line-height: 1.5 !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .option-preview {',
-    '  margin: 6px 0 8px !important;',
-    '  padding: 8px 10px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .option-line {',
-    '  margin: 2px 0 !important;',
-    '  font-size: 12px !important;',
-    '  line-height: 1.4 !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .print-answer-space {',
-    '  height: 12px !important;',
-    '  margin-top: 8px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="QUIZ"] .print-answer-space.lines-2 {',
-    '  height: 24px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="REMEDIATION"] .print-concept-flow,',
-    'body.print-mode .lesson-sheet[data-template="REMEDIATION"] .remediation-card {',
-    '  break-inside: auto !important;',
-    '  page-break-inside: auto !important;',
-    '  padding: 12px 14px !important;',
-    '  margin-bottom: 10px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="REMEDIATION"] .remediation-help-box,',
-    'body.print-mode .lesson-sheet[data-template="REMEDIATION"] .misconception-box,',
-    'body.print-mode .lesson-sheet[data-template="REMEDIATION"] .mini-formula-box {',
-    '  break-inside: avoid !important;',
-    '  page-break-inside: avoid !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .print-concept-flow,',
-    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .enrichment-card {',
-    '  break-inside: auto !important;',
-    '  page-break-inside: auto !important;',
-    '  padding: 12px 14px !important;',
-    '  margin-bottom: 10px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .enrichment-note-box,',
-    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .misconception-box,',
-    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .review-rule-box {',
-    '  break-inside: avoid !important;',
-    '  page-break-inside: avoid !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .practice-card {',
-    '  padding: 14px 16px !important;',
-    '  margin-bottom: 8px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .print-answer-space {',
-    '  height: 14px !important;',
-    '  margin-top: 8px !important;',
-    '}',
-
-    'body.print-mode .lesson-sheet[data-template="ENRICHMENT"] .print-answer-space.lines-2 {',
-    '  height: 28px !important;',
-    '}'
-  ].join('\\n');
-}
 /***************************************
- * 11. HELPERS
+ * 12. HELPERS
  ***************************************/
 function repairLatexText_(value) {
   return String(value == null ? '' : value)
@@ -2712,7 +2605,6 @@ function repairLatexText_(value) {
     .replace(/\r(?=[A-Za-z])/g, '\\r')
     .replace(/\t(?=[A-Za-z])/g, '\\t');
 }
-
 function normalizeDisplayText_(value) {
   return String(value == null ? '' : value)
     .replace(/\r\n?/g, '\n')
@@ -2726,7 +2618,6 @@ function normalizeDisplayText_(value) {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
-
 function escapeHtml_(value) {
   return String(value == null ? '' : value)
     .replace(/&/g, '&amp;')
@@ -2735,52 +2626,33 @@ function escapeHtml_(value) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
-
 function escapeCssString_(value) {
   return String(value == null ? '' : value)
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
     .replace(/\r?\n/g, ' ');
 }
-
 function toBoolean_(value, defaultValue) {
-  if (value === true || value === false) {
-    return value;
-  }
-
+  if (value === true || value === false) return value;
   if (typeof value === 'string') {
     const normalized = value.toLowerCase().trim();
-
-    if (normalized === 'true' || normalized === 'yes' || normalized === '1' || normalized === 'on') {
-      return true;
-    }
-    if (normalized === 'false' || normalized === 'no' || normalized === '0' || normalized === 'off') {
-      return false;
-    }
+    if (normalized === 'true' || normalized === 'yes' || normalized === '1' || normalized === 'on') return true;
+    if (normalized === 'false' || normalized === 'no' || normalized === '0' || normalized === 'off') return false;
   }
-
   return !!defaultValue;
 }
-
 function toBoundedInteger_(value, fallback, min, max) {
   const num = parseInt(value, 10);
-
-  if (isNaN(num)) {
-    return fallback;
-  }
-
+  if (isNaN(num)) return fallback;
   return Math.max(min, Math.min(max, num));
 }
-
 function normalizeEnum_(value, allowedValues, fallback) {
   const normalized = String(value || '').trim().toUpperCase();
   return allowedValues.indexOf(normalized) === -1 ? fallback : normalized;
 }
-
 function isMathSubject_(subject) {
   return String(subject || '').toLowerCase().indexOf('math') !== -1;
 }
-
 function prettyEnum_(value) {
   return String(value || '')
     .toLowerCase()
@@ -2790,10 +2662,8 @@ function prettyEnum_(value) {
     })
     .join(' ');
 }
-
 function getHeaderInfoFromRequest_(request) {
   const req = request || {};
-
   return {
     schoolName: String(req.schoolName || '').trim(),
     teacherName: String(req.teacherName || '').trim(),
