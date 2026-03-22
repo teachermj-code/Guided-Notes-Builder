@@ -33,70 +33,61 @@ const DIFFICULTY_LEVELS = Object.freeze([
   'ABOVE_LEVEL'
 ]);
 const KATEX_DELIMITER_PATTERN = /\\\[(.*?)\\\]|\\\((.*?)\\\)/;
-/***************************************
- * WEB APP ENTRY & ROUTING
- ***************************************/
+const SHEET_ID = '1JvWJsjbcoB17DwJj0lpiDnkpsLGrv8VTeetkvB0qGNs';
+
 function doGet(e) {
   // Check if the URL has ?page=app
-  if (e.parameter.page === 'app') {
-    // Optionally check the token here if you want server-side security
-    // if (!e.parameter.token) { return serveLogin(); }
-    
+  if (e && e.parameter && e.parameter.page === 'app') {
     return HtmlService.createTemplateFromFile('index')
       .evaluate()
-      .setTitle('Lesson Guide Builder')
+      .setTitle(APP_TITLE)
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   } 
   
   // Default: Serve the login page
   return HtmlService.createTemplateFromFile('login')
     .evaluate()
-    .setTitle('Sign In - Lesson Guide Builder')
+    .setTitle('Sign In - ' + APP_TITLE)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-/***************************************
- * GOOGLE AUTHENTICATION & LOGGING LOGIC
- ***************************************/
-function authenticateWithGoogle() {
+/**
+ * Verifies email against 'Users' tab and records to 'Logs' tab
+ */
+function verifyEmail(enteredEmail) {
   try {
-    // 1. Get the Google email of the person clicking the button
-    var email = Session.getActiveUser().getEmail();
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const userSheet = ss.getSheetByName("Users");
+    const logSheet = ss.getSheetByName("Logs");
     
-    if (!email || email === '') {
-      return { 
-        success: false, 
-        message: "Could not detect a Google Account. Make sure you are signed in to Google." 
-      };
+    if (!userSheet || !logSheet) {
+      return { success: false, message: "Database error: Tabs not found." };
     }
 
-    // --- NEW: LOG THE USER TO YOUR GOOGLE SHEET ---
-    try {
-      // PASTE YOUR SHEET ID HERE inside the quotes:
-      var sheetId = '1JvWJsjbcoB17DwJj0lpiDnkpsLGrv8VTeetkvB0qGNs'; 
-      var sheet = SpreadsheetApp.openById(sheetId).getSheets()[0]; // Gets the first tab
+    const cleanEmail = enteredEmail.toLowerCase().trim();
+    
+    // 1. Get all emails from 'Users' tab (Column A)
+    const allowedEmails = userSheet.getRange("A:A").getValues().flat()
+                          .map(email => email.toString().toLowerCase().trim());
+
+    // 2. Check if email exists in the list
+    if (allowedEmails.includes(cleanEmail)) {
       
-      // Add a new row: [Date & Time, Email, Action]
-      sheet.appendRow([new Date(), email, "Logged In"]);
-    } catch (sheetError) {
-      // If the sheet fails for some reason, we log the error in Apps Script
-      // but we DON'T stop the user from logging in.
-      console.error("Failed to log to sheet: " + sheetError);
+      // Log Success
+      logSheet.appendRow([new Date(), cleanEmail, "SUCCESS", "Access Granted"]);
+
+      // Generate the secure token
+      var rawToken = cleanEmail + "|" + new Date().getTime();
+      var encodedToken = Utilities.base64Encode(rawToken);
+
+      return { success: true, token: encodedToken };
+    } else {
+      // Log Failure
+      logSheet.appendRow([new Date(), cleanEmail, "DENIED", "Email not in whitelist"]);
+      return { success: false, message: "You are not authorized to access this portal." };
     }
-    // ----------------------------------------------
-
-    // 2. Create a simple token (Email + Timestamp) encoded in Base64
-    var rawToken = email + "|" + new Date().getTime();
-    var encodedToken = Utilities.base64Encode(rawToken);
-
-    return { 
-      success: true, 
-      token: encodedToken,
-      email: email 
-    };
-
-  } catch (error) {
-    return { success: false, message: error.toString() };
+  } catch (e) {
+    return { success: false, message: "System Error: " + e.toString() };
   }
 }
 
@@ -2188,9 +2179,9 @@ function renderPrintHeaderHtml_(lesson, teacherView, headerInfo) {
         <div class="print-meta-column"><div class="print-meta-label">Subject</div><div class="print-meta-value">${escapeHtml_(lesson.subject)}</div></div>
         <div class="print-meta-column"><div class="print-meta-label">Grade Level</div><div class="print-meta-value">${escapeHtml_(lesson.gradeLevel)}</div></div>
         <div class="print-meta-column"><div class="print-meta-label">Topic</div><div class="print-meta-value">${escapeHtml_(lesson.topic)}</div></div>
-        <div class="print-meta-column"><div class="print-meta-label">Template</div><div class="print-meta-value">${escapeHtml_(prettyEnum_(lesson.templateType))}</div></div>
-        <div class="print-meta-column"><div class="print-meta-label">Difficulty</div><div class="print-meta-value">${escapeHtml_(prettyEnum_(lesson.difficulty))}</div></div>
-        <div class="print-meta-column"><div class="print-meta-label">Quarter</div><div class="print-meta-value">${escapeHtml_(headerInfo.quarter || '')}</div></div>
+        <div class="print-meta-column"><div class="print-meta-label">Template</div><div class="print-meta-value">${prettyEnum_(lesson.templateType)}</div></div>
+        <div class="print-meta-column"><div class="print-meta-label">Difficulty</div><div class="print-meta-value">${prettyEnum_(lesson.difficulty)}</div></div>
+        <div class="print-meta-column"><div class="print-meta-label">Quarter</div><div class="print-meta-value">${escapeHtml_(headerInfo.quarter || 'N/A')}</div></div>
         <div class="print-teacher-full-row"><div class="print-meta-label">Teacher Name</div><div class="print-meta-value">${escapeHtml_(headerInfo.teacherName || '')}</div></div>
       </div>
     </header>
@@ -2599,39 +2590,65 @@ function getPrintDesignTokensCss_() {
     .print-lesson-sheet[data-template="ENRICHMENT"] {--template-accent:#047857;--template-accent-dark:#064e3b;--template-soft-bg:#ecfdf5;--template-soft-border:#a7f3d0;}
   `;
 }
+
 function getPrintBaseStyles_() {
   return `
-    @page { size: Letter portrait; margin: 0.75in 0.75in 1in 0.75in; @bottom-center { content: attr(data-footer); font-size:10px; color:#666; border-top:1px solid #ddd; padding-top:6px; } }
-    .print-lesson-sheet { width:100%; max-width:none; padding:0; margin:0 auto; font-family:Arial,Helvetica,sans-serif; }
-    .print-header-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:12px; }
-    .print-teacher-full-row { grid-column:1/-1; }
-    .print-meta-column { background:var(--template-soft-bg); border:1px solid var(--template-soft-border); border-radius:12px; padding:10px 12px; }
-    .print-meta-label { font-size:10px; font-weight:700; text-transform:uppercase; color:#5b6b82; margin-bottom:4px; }
-    .print-meta-value { font-size:13px; font-weight:600; color:#1c2e45; }
-    .print-lesson-header { background:#ffffff; border:1px solid #dfe3eb; border-top:5px solid var(--template-accent); border-radius:18px; padding:16px; margin-bottom:14px; }
-    .print-doc-banner { margin-bottom:12px; }
-    .print-school-name { font-size:15px; font-weight:700; color:var(--template-accent-dark); margin-bottom:4px; }
-    .print-custom-header { font-size:12px; color:#5b6b82; margin-bottom:8px; }
-    .print-eyebrow { font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--template-accent); margin-bottom:8px; }
-    .print-lesson-title { margin:0; font-size:26px; line-height:1.2; color:var(--template-accent-dark); }
-    .print-concept-card, .print-guided-learn-card, .print-review-mini-card, .print-remediation-block, .print-enrichment-block, .print-practice-card { break-inside:avoid; page-break-inside:avoid; margin-bottom:14px; background:#fff; border:1px solid var(--template-soft-border); border-radius:16px; padding:14px; }
-    .print-compact-card { padding:10px; margin-bottom:8px; }
+    @page { size: Letter portrait; margin: 0.5in 0.5in 0.8in 0.5in; }
+    .print-lesson-sheet { width:100%; font-family:Arial,Helvetica,sans-serif; }
+    
+    /* GRID STABILITY */
+    .print-header-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+    .print-teacher-full-row { grid-column:1/-1; background:var(--template-soft-bg); border:1px solid var(--template-soft-border); border-radius:10px; padding:8px 12px; }
+    .print-meta-column { background:var(--template-soft-bg); border:1px solid var(--template-soft-border); border-radius:10px; padding:8px 12px; }
+    .print-meta-label { font-size:9px; font-weight:700; text-transform:uppercase; color:#5b6b82; margin-bottom:2px; }
+    .print-meta-value { font-size:12px; font-weight:600; color:#1c2e45; }
+    
+    .print-lesson-header { border-top:5px solid var(--template-accent); padding-bottom:10px; margin-bottom:15px; border-bottom:1px solid #eee; }
+    .print-lesson-title { margin:5px 0; font-size:22px; color:var(--template-accent-dark); }
+    
+    /* THE GAP FIX: Allowing "Flow" for long explanations */
     .print-keep-together { break-inside:avoid; page-break-inside:avoid; }
-    .print-flow { break-inside:auto; }
-    .print-compact { padding:8px !important; }
+    .print-flow-split { break-inside:auto !important; page-break-inside:auto !important; } 
+    
+    .print-section-title { font-size:14pt; color:var(--template-accent); border-bottom:1px solid var(--template-soft-border); margin-top:20px; page-break-after:avoid; }
   `;
 }
+
 function getPrintTemplateStyles_() {
   return `
-    .print-lesson-sheet[data-template="QUIZ"] .print-practice-card { padding:8px; margin-bottom:8px; }
-    .print-lesson-sheet[data-template="QUIZ"] .option-preview { margin-bottom:8px; }
-    .print-lesson-sheet[data-template="REMEDIATION"] .print-remediation-block, .print-lesson-sheet[data-template="ENRICHMENT"] .print-enrichment-block { margin-bottom:12px; }
+    /* QUIZ AIR REMOVAL */
+    .print-lesson-sheet[data-template="QUIZ"] .print-practice-card { 
+      padding:6px 10px !important; 
+      margin-bottom:6px !important; 
+      border-radius:8px !important;
+    }
+    .print-lesson-sheet[data-template="QUIZ"] .practice-question { 
+      margin-bottom:4px !important; 
+      font-size:13px !important; 
+      line-height:1.3 !important;
+    }
+    .print-lesson-sheet[data-template="QUIZ"] .option-line { 
+      margin:2px 0 !important; 
+      font-size:12px !important; 
+    }
+    .print-lesson-sheet[data-template="QUIZ"] .print-answer-space { 
+      margin-top:5px !important; 
+      height:18px !important; 
+    }
+
+    /* REMEDIATION & ENRICHMENT: Force Flow behavior */
+    .print-lesson-sheet[data-template="REMEDIATION"] .print-keep-together,
+    .print-lesson-sheet[data-template="ENRICHMENT"] .print-keep-together {
+      break-inside: auto !important;
+      page-break-inside: auto !important;
+    }
   `;
 }
+
 function getPrintStyles_(footerText) {
   const safeFooter = escapeCssString_(footerText || APP_TITLE);
   return [
-    '@page { size: Letter portrait; margin: 0.75in 0.75in 1in 0.75in; @bottom-center { content: "' + safeFooter + '"; font-size: 10px; color: #666; border-top: 1px solid #ddd; padding-top: 6px; } }',
+    '@page { size: Letter portrait; margin: 0.75in 0.75in 1in 0.75in; @bottom-center { content: "' + safeFooter + ' | Page " counter(page) " of " counter(pages); font-size: 10px; color: #666; border-top: 1px solid #ddd; padding-top: 6px; } }',
     'html, body.print-mode { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background: #fff !important; color: #000 !important; }',
     'body.print-mode .print-lesson-sheet { width: 100%; max-width: none; padding: 0; margin: 0 auto; }',
 
