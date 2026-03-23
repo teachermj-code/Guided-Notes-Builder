@@ -33,7 +33,10 @@ const DIFFICULTY_LEVELS = Object.freeze([
   'ABOVE_LEVEL'
 ]);
 const KATEX_DELIMITER_PATTERN = /\\\[(.*?)\\\]|\\\((.*?)\\\)/;
-const SHEET_ID = '1JvWJsjbcoB17DwJj0lpiDnkpsLGrv8VTeetkvB0qGNs';
+// This fetches the ID from your Project Settings securely
+
+
+
 
 function doGet(e) {
   // Check if the URL has ?page=app
@@ -52,7 +55,7 @@ function doGet(e) {
 }
 
 /**
- * Verifies email against 'Users' tab and records to 'Logs' tab
+ * Verifies email against 'Users' tab and records to 'Logs' tab (5-column format)
  */
 function verifyEmail(enteredEmail) {
   try {
@@ -66,15 +69,18 @@ function verifyEmail(enteredEmail) {
 
     const cleanEmail = enteredEmail.toLowerCase().trim();
     
-    // 1. Get all emails from 'Users' tab (Column A)
-    const allowedEmails = userSheet.getRange("A:A").getValues().flat()
+    // 1. PERFORMANCE FIX: Only get rows that actually have emails
+    const lastRow = userSheet.getLastRow();
+    if (lastRow === 0) return { success: false, message: "User list is empty." };
+    
+    const allowedEmails = userSheet.getRange(1, 1, lastRow, 1).getValues().flat()
                           .map(email => email.toString().toLowerCase().trim());
 
     // 2. Check if email exists in the list
     if (allowedEmails.includes(cleanEmail)) {
       
-      // Log Success
-      logSheet.appendRow([new Date(), cleanEmail, "SUCCESS", "Access Granted"]);
+      // LOG SUCCESS: We add a 5th value ("N/A") to match your new column structure
+      logSheet.appendRow([new Date(), cleanEmail, "SUCCESS", "Access Granted", "N/A"]);
 
       // Generate the secure token
       var rawToken = cleanEmail + "|" + new Date().getTime();
@@ -82,8 +88,8 @@ function verifyEmail(enteredEmail) {
 
       return { success: true, token: encodedToken };
     } else {
-      // Log Failure
-      logSheet.appendRow([new Date(), cleanEmail, "DENIED", "Email not in whitelist"]);
+      // LOG FAILURE: Matches the 5-column structure
+      logSheet.appendRow([new Date(), cleanEmail, "DENIED", "Email not in whitelist", "N/A"]);
       return { success: false, message: "You are not authorized to access this portal." };
     }
   } catch (e) {
@@ -248,21 +254,37 @@ function getLessonStyles_() {
     '@media (max-width: 760px){.lesson-meta,.vocab-grid,.review-grid,.quiz-meta-lines,.guided-stage-grid,.review-list,.remediation-grid,.enrichment-grid{grid-template-columns:1fr;}.lesson-sheet[data-template="REVIEW"] .compact-vocab-list{columns:1;}}'
   ].join('');
 }
+
 function buildLessonGuide(formData) {
   const request = sanitizeRequest_(formData);
-  const lesson = generateLessonJson_(request);
-  return {
-    ok: true,
-    request: request,
-    lesson: lesson,
-    html: renderLessonHtml_(lesson, {
-      forPrint: false,
-      copyMode: request.previewMode,
-      layoutMode: request.layoutMode,
-      headerInfo: getHeaderInfoFromRequest_(request)
-    })
-  };
+  
+  try {
+    const lesson = generateLessonJson_(request);
+    
+    // Log the event
+    // Status: SUCCESS
+    // Details: "Lesson Generated Successfully"
+    // Content: Passing the 'request' object for Column E
+    writeToLog_("SUCCESS", "Lesson Generated Successfully", request);
+
+    return {
+      ok: true,
+      request: request,
+      lesson: lesson,
+      html: renderLessonHtml_(lesson, {
+        forPrint: false,
+        copyMode: request.previewMode,
+        layoutMode: request.layoutMode,
+        headerInfo: getHeaderInfoFromRequest_(request)
+      })
+    };
+  } catch (err) {
+    // Log the error
+    writeToLog_("ERROR", err.toString(), request);
+    throw err;
+  }
 }
+
 function renderLessonPreview(payload) {
   if (!payload || !payload.lesson) {
     throw new Error('Missing lesson data for preview rendering.');
@@ -334,6 +356,8 @@ function getGeminiConfig_() {
     model: model
   };
 }
+const SHEET_ID = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+
 /***************************************
  * 5. GEMINI GENERATION
  ***************************************/
@@ -415,7 +439,7 @@ function buildGeminiUrl_(apiKey, model) {
   );
 }
 function buildPrompt_(request) {
-  const subjectGuidance = getSubjectGuidance_(request.subject);
+  const subjectGuidance = getSubjectGuidance_(request.subject, request.gradeLevel);
   const templateGuidance = getTemplateGuidance_(request.templateType);
   const templateFieldBehavior = getTemplateFieldBehavior_(request.templateType);
   const localContextGuidance = getLocalContextGuidance_();
@@ -432,6 +456,7 @@ function buildPrompt_(request) {
     '- Return valid JSON only.',
     '- Fill all schema fields completely and meaningfully.',
     '- Ensure every field is classroom-ready, specific, and useful.',
+    '- Create EXACTLY ' + request.itemCount + ' practice items. Do not skip any.',
     '',
     'Key concept rules:',
     '- Each key concept must include: heading, summary, formula, symbolMeaning, workedExample, misconception.',
@@ -509,52 +534,38 @@ function buildPrompt_(request) {
     '- Make the tone, section content, and practice style clearly match the selected template.'
   ].join('\n');
 }
-function getSubjectGuidance_(subject) {
-  const s = String(subject || '').toLowerCase();
-  if (s.indexOf('math') !== -1) {
-    return [
-      '- This is a Mathematics lesson.',
-      '- Provide 4 to 6 key concepts.',
-      '- Every key concept must include a non-empty formula in KaTeX if the topic uses a rule, property, equation, or computational relationship.',
-      '- Define all symbols clearly in symbolMeaning.',
-      '- workedExample must start with a real problem or context before showing steps.',
-      '- Use a short word problem, numerical situation, or visual interpretation prompt before the solution steps.',
-      '- workedExample must show step-by-step reasoning on separate lines.',
-      '- In workedExample and symbolMeaning, every symbolic reference must use KaTeX, for example \\(A_{\\text{total}}\\), \\(A_1\\), and \\(A_2\\).',
-      '- End each workedExample with a final answer line.',
-      '- misconception must address a likely student error.',
-      '- Practice items should progress from recall to application when possible.'
-    ].join('\n');
+
+/**
+ * THE DYNAMIC GUIDANCE ENGINE
+ * Fetches rules from the Spreadsheet based on Subject and Grade Level.
+ */
+function getSubjectGuidance_(subject, gradeLevel) {
+  const s = normalizeText_(subject);
+  const gradeNum = parseGradeLevel_(gradeLevel);
+  const level = getLearningLevel_(gradeNum);
+
+  // 1. Convert input (e.g., "Arithmetic") to standard key (e.g., "math")
+  const subjectKey = detectSubject_(s);
+
+  // 2. Fetch data from your Spreadsheet
+  const sheetRules = getRulesFromSheet();
+  
+  if (sheetRules && sheetRules[subjectKey]) {
+    // Priority: Specific Level -> Early Fallback -> Default
+    const rules = sheetRules[subjectKey][level] 
+               || sheetRules[subjectKey]['early'] 
+               || sheetRules[subjectKey].default;
+               
+    if (rules && rules.length > 0) return guidance_(rules);
   }
-  if (s.indexOf('science') !== -1) {
-    return [
-      '- Emphasize scientific accuracy, observation, explanation, and cause-and-effect.',
-      '- Use concrete real-world examples and clear terminology.'
-    ].join('\n');
-  }
-  if (s.indexOf('english') !== -1) {
-    return [
-      '- Emphasize grammar, vocabulary, comprehension, and clear expression.',
-      '- Use age-appropriate examples and concise explanations.'
-    ].join('\n');
-  }
-  if (s.indexOf('filipino') !== -1) {
-    return [
-      '- Gumamit ng malinaw, wasto, at angkop na wikang Filipino.',
-      '- Tiyakin na ang mga paliwanag at halimbawa ay angkop sa antas ng mag-aaral.'
-    ].join('\n');
-  }
-  if (s.indexOf('araling') !== -1 || s.indexOf('panlipunan') !== -1 || s === 'ap') {
-    return [
-      '- Emphasize chronology, geography, civics, source-based understanding, or social interpretation as needed.',
-      '- Use concise factual examples and student-friendly wording.'
-    ].join('\n');
-  }
-  return [
-    '- Keep the lesson accurate, clear, and age-appropriate.',
-    '- Balance explanation, examples, and guided practice.'
-  ].join('\n');
+
+  // 3. Absolute Fallback if Sheet is empty/broken
+  return guidance_([
+    'Ensure the lesson is age-appropriate for ' + gradeLevel + '.',
+    'Provide clear explanations and step-by-step examples.'
+  ]);
 }
+
 function getTemplateGuidance_(templateType) {
   const t = normalizeEnum_(templateType, TEMPLATE_TYPES, DEFAULT_TEMPLATE);
   switch (t) {
@@ -865,10 +876,8 @@ function getLessonSchema_(request) {
           }
         }
       },
-      practiceItems: {
+practiceItems: {
         type: 'array',
-        minItems: request.itemCount,
-        maxItems: request.itemCount,
         items: {
           type: 'object',
           additionalProperties: false,
@@ -915,7 +924,7 @@ function coerceRequest_(formData) {
     layoutMode: normalizeEnum_(data.layoutMode, LAYOUT_MODES, DEFAULT_LAYOUT_MODE),
     templateType: normalizeEnum_(data.templateType, TEMPLATE_TYPES, DEFAULT_TEMPLATE),
     difficulty: normalizeEnum_(data.difficulty, DIFFICULTY_LEVELS, 'ON_LEVEL'),
-    itemCount: toBoundedInteger_(data.itemCount, DEFAULT_ITEM_COUNT, 8, 20),
+    itemCount: toBoundedInteger_(data.itemCount, DEFAULT_ITEM_COUNT, 5, 20),
     includeSuccessCriteria: toBoolean_(data.includeSuccessCriteria, true),
     includeVocabulary: toBoolean_(data.includeVocabulary, true),
     includeMisconceptions: toBoolean_(data.includeMisconceptions, true),
@@ -936,7 +945,8 @@ function sanitizeRequest_(formData) {
 function normalizeLesson_(lesson, fallbackRequest) {
   const base = lesson || {};
   const req = fallbackRequest || {};
-  const expectedItemCount = toBoundedInteger_(req.itemCount, DEFAULT_ITEM_COUNT, 8, 20);
+  const expectedItemCount = toBoundedInteger_(req.itemCount, DEFAULT_ITEM_COUNT, 5, 20);
+  lesson.practiceItems = (lesson.practiceItems || []).slice(0, expectedItemCount);
   const keyConcepts = Array.isArray(base.keyConcepts) ? base.keyConcepts : [];
   const practiceItems = Array.isArray(base.practiceItems) ? base.practiceItems : [];
   const teacherNotes = Array.isArray(base.teacherNotes) ? base.teacherNotes : [];
@@ -1020,7 +1030,7 @@ function normalizeItemType_(value) {
 }
 function validateLesson_(lesson, request) {
   const req = request || {};
-  const expectedItemCount = toBoundedInteger_(req.itemCount, DEFAULT_ITEM_COUNT, 8, 20);
+  const expectedItemCount = toBoundedInteger_(req.itemCount, DEFAULT_ITEM_COUNT, 5, 20);
   const minimumConceptCount = isMathSubject_(lesson.subject) ? 4 : 3;
   if (!lesson.title) throw new Error('Lesson title is missing.');
   if (!lesson.subject) throw new Error('Lesson subject is missing.');
@@ -1126,7 +1136,7 @@ function repairLessonJson_(brokenJsonText, schema, apiKey, model) {
       }
     ],
     generationConfig: {
-      maxOutputTokens: 8192,
+      maxOutputTokens: 1000000,
       responseMimeType: 'application/json',
       responseJsonSchema: schema
     }
@@ -2058,6 +2068,7 @@ function renderAnswerKeySection_(lesson, teacherView) {
 function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
   const answerText = item.acceptedAnswers.join(' | ');
   let controlsHtml = '';
+  
   if (item.type === 'multiple-choice') {
     const optionMarkup = item.options.map(function (option, optionIndex) {
       const letter = String.fromCharCode(65 + optionIndex);
@@ -2069,51 +2080,42 @@ function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
         </label>
       `;
     }).join('');
+    
     controlsHtml = forPrint
-      ? `
-        <div class="option-preview">
-          ${item.options.map(function (option, optionIndex) {
-        return `<div class="option-line"><strong>${String.fromCharCode(65 + optionIndex)}.</strong> ${escapeHtml_(option)}</div>`;
-      }).join('')}
-        </div>
-        <div class="print-answer-space"></div>
-      `
-      : `
-        <div class="practice-controls practice-controls-block">
-          <div class="mc-choice-list">
-            ${optionMarkup}
-          </div>
+      ? `<div class="option-preview">
+          ${item.options.map((option, idx) => `<div class="option-line"><strong>${String.fromCharCode(65 + idx)}.</strong> ${escapeHtml_(option)}</div>`).join('')}
+        </div><div class="print-answer-space"></div>`
+      : `<div class="practice-controls practice-controls-block">
+          <div class="mc-choice-list">${optionMarkup}</div>
           <div class="mc-action-row">
             <button class="btn btn-primary" onclick="checkAnswer(${index})">Check</button>
-            <button class="btn btn-light" onclick="showAnswer(${index})">Show Answer</button>
+            <button id="showBtn_${index}" class="btn btn-light" onclick="showAnswer(${index})">Show Answer</button>
           </div>
-        </div>
-      `;
+        </div>`;
+        
   } else if (item.type === 'true-false') {
     controlsHtml = forPrint
       ? '<div class="print-answer-space"></div>'
-      : `
-        <div class="practice-controls">
+      : `<div class="practice-controls">
           <select id="practice_${index}" class="answer-input">
             <option value="">Select an answer</option>
             <option value="True">True</option>
             <option value="False">False</option>
           </select>
           <button class="btn btn-primary" onclick="checkAnswer(${index})">Check</button>
-          <button class="btn btn-light" onclick="showAnswer(${index})">Show Answer</button>
-        </div>
-      `;
+          <button id="showBtn_${index}" class="btn btn-light" onclick="showAnswer(${index})">Show Answer</button>
+        </div>`;
+        
   } else {
     controlsHtml = forPrint
       ? '<div class="print-answer-space lines-2"></div>'
-      : `
-        <div class="practice-controls">
+      : `<div class="practice-controls">
           <input id="practice_${index}" class="answer-input" type="text" autocomplete="off" placeholder="Type your answer">
           <button class="btn btn-primary" onclick="checkAnswer(${index})">Check</button>
-          <button class="btn btn-light" onclick="showAnswer(${index})">Show Answer</button>
-        </div>
-      `;
+          <button id="showBtn_${index}" class="btn btn-light" onclick="showAnswer(${index})">Show Answer</button>
+        </div>`;
   }
+
   return `
     <article class="card practice-card" data-practice-index="${index}">
       <div class="practice-number">Item ${index + 1} • ${escapeHtml_(item.type)}</div>
@@ -2121,15 +2123,15 @@ function renderPracticeItemHtml_(item, index, teacherView, forPrint) {
       ${controlsHtml}
       ${forPrint ? '' : `<div id="feedback_${index}" class="feedback"></div>`}
       ${teacherView
-      ? `<div class="teacher-answer-box">
+        ? `<div class="teacher-answer-box">
             <strong>Accepted answer(s):</strong> <span class="editable" data-practice-field="answers">${escapeHtml_(answerText)}</span>
             ${item.hint ? `<div class="hint-line"><strong>Hint:</strong> <span class="editable" data-practice-field="hint">${escapeHtml_(item.hint)}</span></div>` : ''}
           </div>`
-      : `<div id="answer_${index}" class="answer-reveal hidden">
+        : `<div id="answer_${index}" class="answer-reveal hidden">
             <strong>Accepted answer(s):</strong> ${escapeHtml_(answerText)}
             ${item.hint ? `<div class="hint-line"><strong>Hint:</strong> ${escapeHtml_(item.hint)}</div>` : ''}
           </div>`
-    }
+      }
     </article>
   `;
 }
@@ -2568,6 +2570,7 @@ function buildPrintableDocument_(bodyHtml, options) {
           window.addEventListener('load', function () {
             window.setTimeout(renderMathForPrint, 180);
           });
+
         </script>
       </body>
     </html>
@@ -2754,3 +2757,168 @@ function getHeaderInfoFromRequest_(request) {
     customHeader: String(req.customHeader || '').trim()
   };
 }
+
+
+/**
+ * Reads "CurriculumRules" tab
+ * Columns: subject, level, rule_order, rule_text, active
+ */
+function getRulesFromSheet() {
+  // Safety check: Is the ID missing from properties?
+  if (!SHEET_ID) {
+    console.error("SHEET_ID is missing from Script Properties!");
+    return null;
+  }
+
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+
+    const data = sheet.getDataRange().getValues();
+    const dynamicRules = {};
+
+    for (let i = 1; i < data.length; i++) {
+      let [subject, level, order, text, active] = data[i];
+      
+      // Only process if the "active" column is TRUE
+      if (!subject || !level || !text || active !== true) continue;
+
+      const sKey = subject.toLowerCase().trim();
+      const lKey = level.toLowerCase().trim();
+
+      if (!dynamicRules[sKey]) dynamicRules[sKey] = {};
+      if (!dynamicRules[sKey][lKey]) dynamicRules[sKey][lKey] = [];
+      
+      dynamicRules[sKey][lKey].push({ order: order, text: text });
+    }
+
+    // Sort by rule_order and clean up
+    for (let s in dynamicRules) {
+      for (let l in dynamicRules[s]) {
+        dynamicRules[s][l].sort((a, b) => a.order - b.order);
+        dynamicRules[s][l] = dynamicRules[s][l].map(item => item.text);
+      }
+    }
+    return dynamicRules;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Reads "SubjectMapping" tab
+ * Columns: keyword, standard_subject
+ */
+function getMappingsFromSheet() {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ss.getSheetByName("SubjectMapping");
+    if (!sheet) return null;
+
+    const data = sheet.getDataRange().getValues();
+    const mappings = {};
+
+    for (let i = 1; i < data.length; i++) {
+      let [keyword, standard] = data[i];
+      if (!keyword || !standard) continue;
+      mappings[keyword.toLowerCase().trim()] = standard.toLowerCase().trim();
+    }
+    return mappings;
+  } catch (e) {
+    return null;
+  }
+}
+
+function detectSubject_(text) {
+  const input = normalizeText_(text);
+  const mappings = getMappingsFromSheet();
+
+  if (mappings) {
+    if (mappings[input]) return mappings[input];
+    for (let keyword in mappings) {
+      if (input.includes(keyword)) return mappings[keyword];
+    }
+  }
+  return 'default';
+}
+
+function parseGradeLevel_(gradeLevel) {
+  const g = normalizeText_(gradeLevel);
+  if (hasAny_(g, ['k', 'kinder', 'prep'])) return 0;
+  const match = g.match(/\d+/);
+  if (match) return Number(match[0]);
+  const words = { 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6 };
+  for (let key in words) { if (g.includes(key)) return words[key]; }
+  return null;
+}
+
+function getLearningLevel_(gradeNum) {
+  if (gradeNum === 0) return 'kinder';
+  if (gradeNum > 0 && gradeNum <= 2) return 'early';
+  if (gradeNum >= 3 && gradeNum <= 6) return 'elementary';
+  if (gradeNum >= 7 && gradeNum <= 10) return 'junior_high';
+  if (gradeNum >= 11) return 'senior_high';
+  return 'default';
+}
+
+function normalizeText_(v) { return String(v || '').toLowerCase().trim(); }
+function hasAny_(text, keys) { return keys.some(k => text.includes(k)); }
+function guidance_(lines) { return lines.map(line => `- ${line}`).join('\n'); }
+
+/**
+ * Records app activity to the Logs tab.
+ * Columns: Timestamp | Email Address | Status | Details | GeneratedContent
+ */
+function writeToLog_(status, details, request = null) {
+  const props = PropertiesService.getScriptProperties();
+  const sheetId = props.getProperty('SHEET_ID');
+  
+  if (!sheetId) {
+    console.error("SHEET_ID is missing from Script Properties.");
+    return;
+  }
+
+  try {
+    const ss = SpreadsheetApp.openById(sheetId);
+    const sheet = ss.getSheetByName("Logs");
+    if (!sheet) {
+      console.warn("Logs tab not found in spreadsheet.");
+      return;
+    }
+
+    const timestamp = new Date();
+    // Gets the email of the person currently using the app
+    const email = Session.getActiveUser().getEmail() || "Unknown User";
+
+    // 1. Format the "GeneratedContent" for Column E
+    // We take the request object and turn it into a readable string
+    let contentSummary = "N/A"; 
+    if (request && typeof request === 'object') {
+      contentSummary = [
+        `Subject: ${request.subject || 'N/A'}`,
+        `Level: ${request.gradeLevel || 'N/A'}`,
+        `Topic: ${request.topic || 'N/A'}`,
+        `Template: ${request.templateType || 'N/A'}`
+      ].join(" | ");
+    } else if (typeof request === 'string') {
+      contentSummary = request; // Handle case where request might just be a string
+    }
+
+    // 2. Append the row to match your 5 headers
+    sheet.appendRow([
+      timestamp,      // Column A: Timestamp
+      email,          // Column B: Email Address
+      status,         // Column C: Status (SUCCESS/ERROR/DENIED)
+      details,        // Column D: Details (Message)
+      contentSummary  // Column E: GeneratedContent (Metadata)
+    ]);
+    
+  } catch (e) {
+    console.error("Logging failed: " + e.toString());
+  }
+}
+
+
+
+
+
+

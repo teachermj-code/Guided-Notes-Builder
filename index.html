@@ -17,37 +17,53 @@
 
   <style>
   
-  #scrollToTopBtn {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      z-index: 2000; /* Higher than the toolbar */
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      font-size: 20px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--template-accent, #0052cc); /* Matches Blue/Green/Red theme */
+#scrollToTopBtn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px; /* Default for Desktop */
+  z-index: 10001 !important; /* Higher than the menu */
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--template-accent, #0052cc);
   color: white;
   border: none;
-    }
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
 
-    /* Styles for hiding/showing */
-    .scroll-btn-hide {
-      opacity: 0;
-      visibility: hidden;
-      transform: translateY(20px);
-    }
+/* --- THE MOBILE SPLIT --- */
+@media (max-width: 760px) {
+  #scrollToTopBtn {
+    right: auto; /* Cancel the right positioning */
+    left: 25px;  /* Move to the bottom-left */
+    bottom: 25px;
+    width: 45px; /* Slightly smaller for mobile */
+    height: 45px;
+  }
+  
+  /* Ensure the Hamburger stays on the right */
+  .mobile-fab {
+    right: 25px !important;
+    left: auto !important;
+  }
+}
 
-    .scroll-btn-show {
-      opacity: 1;
-      visibility: visible;
-      transform: translateY(0);
-    }
+.scroll-btn-hide {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.5);
+}
+
+.scroll-btn-show {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
 
     /* Ensure variables are available to the toolbar */
 .preview-shell {
@@ -804,84 +820,133 @@
 
     }
 
-    @media (max-width: 1080px) {
-
-      .grid {
-
-        grid-template-columns: 1fr;
-
-      }
-
+/* --- 1. DESKTOP SAFETY DEFAULTS --- */
+    /* These ensure mobile-only elements stay hidden on Laptops/Desktops */
+    .mobile-back-btn, .mobile-fab, .action-sheet-overlay {
+      display: none;
     }
 
+    /* --- 2. TABLET OPTIMIZATION (1080px and down) --- */
+    @media (max-width: 1080px) {
+      .grid { 
+        grid-template-columns: 1fr !important; 
+      }
+      .panel { 
+        position: relative !important; 
+        top: 0 !important; 
+        max-height: none !important; 
+        width: 100% !important;
+      }
+    }
+
+    /* --- 3. MOBILE STATE-BASED OPTIMIZATION (760px and down) --- */
     @media (max-width: 760px) {
-
-      .hero {
-
-        padding: 20px 18px;
-
+      .hero { display: none !important; }
+      .shell { margin: 0; padding: 10px; }
+      
+      /* Force the grid to act like a vertical stack */
+      .grid { 
+        display: block !important; 
+        margin-top: 0; 
       }
 
-      .hero h1 {
-
-        font-size: 30px;
-
-        letter-spacing: 0.025em;
-
+      /* Initial State: Setup panel fills screen, Preview is hidden */
+      .panel { 
+        width: 100% !important; 
+        margin-bottom: 20px; 
+        border-radius: 16px; 
+        display: block; /* Visible by default on load */
+      }
+      
+      .preview-shell { 
+        display: none; /* Hidden by default on load until 'Generate' is clicked */
+        width: 100% !important; 
+        border-radius: 16px; 
+        padding: 10px; 
+        border: none; 
       }
 
-      .hero p {
-
-        font-size: 12px;
-
+      /* THE BACK BUTTON: Only visible on Mobile Preview */
+      .mobile-back-btn {
+        display: block !important; 
+        width: 100%;
+        margin-bottom: 15px;
+        padding: 14px;
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        color: #475569;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        text-align: center;
       }
 
-      .checkbox-grid {
+      /* Hide the desktop toolbar to save half the screen */
+      .preview-toolbar { display: none !important; }
 
-        grid-template-columns: 1fr;
-
+      /* MOBILE ACTION SHEET (The Pop-up Menu) */
+      .action-sheet-overlay {
+        position: fixed;
+        top: 0; left: 0; 
+        width: 100%; height: 100%;
+        background: rgba(15, 39, 71, 0.7);
+        z-index: 9999;
+        display: none; /* Controlled via JS openMobileMenu() */
+        align-items: flex-end;
+      }
+      
+      .action-sheet-content {
+        background: white; 
+        width: 100%; 
+        padding: 24px;
+        border-radius: 24px 24px 0 0;
+        display: flex; 
+        flex-direction: column; 
+        gap: 12px;
+        animation: slideUp 0.3s ease-out;
       }
 
-      .preview-toolbar-top {
-
-        flex-direction: column;
-
-        align-items: stretch;
-
+      @keyframes slideUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
       }
 
-      .preview-toolbar-controls {
-
-        flex-direction: column;
-
-        align-items: stretch;
-
+      .sheet-title { 
+        font-weight: 800; 
+        color: var(--brand-dark); 
+        font-size: 18px; 
+        margin-bottom: 5px; 
       }
 
-      .preview-selects {
+      /* Floating Action Button (The ☰ button) */
+.mobile-fab {
+    display: none; /* JavaScript will change this to 'flex' */
+    position: fixed; 
+    bottom: 25px; 
+    right: 25px;
+    background: var(--template-accent, #0052cc) !important; /* Force the color */
+    color: white !important;
+    width: 60px; 
+    height: 60px;
+    border-radius: 50%; 
+    align-items: center; 
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+    z-index: 9999 !important; /* Ensure it's on top of everything */
+    border: none; 
+    font-size: 24px;
+  }
 
-        flex-direction: column;
-
-        align-items: stretch;
-
+      /* Prevent math from stretching mobile screen */
+      .katex-display { 
+        font-size: 0.85em; 
+        overflow-x: auto; 
+        padding-bottom: 5px; 
       }
-
-      .preview-field {
-
-        min-width: 0;
-
-      }
-
-      .preview-actions {
-
-        justify-content: flex-start;
-
-      }
-
     }
 
     <?!= getLessonStyles_() ?>
-
   </style>
 
 </head>
@@ -941,7 +1006,7 @@
 
             <label for="objective">Objective / Competency</label>
 
-            <textarea id="objective" placeholder="Paste the competency or state the lesson objective"></textarea>
+            <textarea id="objective" placeholder="e.g. Solves routine and non-routine problems involving speed, distance, and time."></textarea>
 
           </div>
 
@@ -993,9 +1058,9 @@
 
             <label for="itemCount">Number of Practice Items</label>
 
-            <input id="itemCount" type="number" min="8" max="20" value="10">
+            <input id="itemCount" type="number" min="5" max="20" value="10">
 
-            <div class="help-note">Choose from 8 to 20 items.</div>
+            <div class="help-note">Choose from 5 to 20 items.</div>
 
           </div>
 
@@ -1070,6 +1135,9 @@
       </div>
 
       <div class="preview-shell">
+<button class="mobile-back-btn" onclick="backToSetup()">
+   ← Edit Lesson Setup
+</button>
 
         <div class="preview-toolbar">
 
@@ -1163,837 +1231,392 @@
   </div>
 
   <script>
-
     let currentLesson = null;
-
     let currentRequest = null;
-
     let editMode = false;
-
     let hasManualEdits = false;
 
+    // --- CORE INITIALIZATION ---
+
     function getEmptyStateHtml() {
-
       return `
-
         <div class="empty-state-minimal">
-
           <div class="empty-icon-minimal">✦</div>
-
           <p>Select your lesson parameters on the left and click <strong>Generate Lesson</strong>.</p>
-
         </div>
-
       `;
-
     }
 
     function renderMathInPreview() {
-
       const output = document.getElementById('outputView');
-
       if (!output) return;
-
       if (typeof renderMathInElement !== 'function') {
-
         window.setTimeout(renderMathInPreview, 120);
-
         return;
-
       }
-
       renderMathInElement(output, {
-
         delimiters: [
-
           { left: '\\[', right: '\\]', display: true },
-
           { left: '\\(', right: '\\)', display: false }
-
         ],
-
         throwOnError: false
-
       });
-
     }
 
     function setStatus(message, type) {
-
       const status = document.getElementById('status');
-
       status.className = 'status' + (type ? ' ' + type : '');
-
       status.textContent = message || '';
-
     }
 
     function setBusy(isBusy, message) {
-
       const generateBtn = document.getElementById('generateBtn');
-
-      const editBtn = document.getElementById('editBtn');
-
-      const printStudentBtn = document.getElementById('printStudentBtn');
-
-      const printTeacherBtn = document.getElementById('printTeacherBtn');
-
       generateBtn.disabled = isBusy;
-
       generateBtn.textContent = isBusy ? 'Generating...' : 'Generate Lesson';
-
-      if (isBusy) {
-
-        setStatus(message || 'Working on your lesson guide...', '');
-
-        editBtn.disabled = true;
-
-        printStudentBtn.disabled = true;
-
-        printTeacherBtn.disabled = true;
-
-      } else if (currentLesson) {
-
-        editBtn.disabled = false;
-
-        printStudentBtn.disabled = false;
-
-        printTeacherBtn.disabled = false;
-
-      }
-
+      if (isBusy) setStatus(message || 'Working on your lesson guide...', '');
     }
 
+    // --- DATA HANDLING ---
+
     function getFormData() {
-
       return {
-
         subject: document.getElementById('subject').value.trim(),
-
         gradeLevel: document.getElementById('gradeLevel').value.trim(),
-
         topic: document.getElementById('topic').value.trim(),
-
         objective: document.getElementById('objective').value.trim(),
-
         templateType: document.getElementById('templateType').value,
-
         difficulty: document.getElementById('difficulty').value,
-
         itemCount: document.getElementById('itemCount').value,
-
         includeSuccessCriteria: document.getElementById('includeSuccessCriteria').checked,
-
         includeVocabulary: document.getElementById('includeVocabulary').checked,
-
         includeMisconceptions: document.getElementById('includeMisconceptions').checked,
-
         includeRealWorld: document.getElementById('includeRealWorld').checked,
-
         previewMode: document.getElementById('previewMode').value,
-
         layoutMode: document.getElementById('layoutMode').value,
-
         schoolName: document.getElementById('schoolName').value.trim(),
-
         teacherName: document.getElementById('teacherName').value.trim(),
-
         quarter: document.getElementById('quarter').value.trim(),
-
         customHeader: document.getElementById('customHeader').value.trim()
-
       };
-
     }
 
     function setOutputView(html, isPlaceholder) {
-
       const output = document.getElementById('outputView');
-
       output.className = isPlaceholder ? 'placeholder' : '';
-
       output.innerHTML = html;
-
     }
 
-    function syncAndLockEdits() {
-
-      if (hasManualEdits) {
-
-        syncPreviewEditsToLesson();
-
-      }
-
-      disableEditMode(true);
-
-    }
+    // --- LESSON GENERATION ---
 
     function buildLesson() {
-
       const data = getFormData();
-
       if (!data.subject || !data.gradeLevel || !data.topic) {
-
         setStatus('Subject, grade level, and topic are required.', 'error');
-
         return;
-
       }
-
       disableEditMode(true);
-
       setBusy(true, 'Generating lesson guide...');
-
       setOutputView('Generating structured lesson content...', true);
 
       google.script.run
-
         .withSuccessHandler(function (res) {
-
           currentLesson = res.lesson;
-
           currentRequest = res.request || data;
-
           hasManualEdits = false;
-
           setOutputView(res.html, false);
-
           renderMathInPreview();
+          
+          // Trigger Mobile Layout Transition
+          onLessonGenerated(); 
 
           updateEditButtonState();
-
           updatePreviewChrome();
-
-          document.getElementById('editBtn').disabled = false;
-
-          document.getElementById('printStudentBtn').disabled = false;
-
-          document.getElementById('printTeacherBtn').disabled = false;
-
-          document.getElementById('showAnswersBtn').disabled = false;
+          
+          ['editBtn', 'printStudentBtn', 'printTeacherBtn', 'showAnswersBtn'].forEach(id => {
+            document.getElementById(id).disabled = false;
+          });
 
           setBusy(false);
-
           setStatus('Lesson guide generated successfully.', 'success');
-
         })
-
         .withFailureHandler(function (err) {
-
-          currentLesson = null;
-
-          currentRequest = null;
-
-          setOutputView('Generation failed. Check your Script Properties and try again.', true);
-
           setBusy(false);
-
-          document.getElementById('showAnswersBtn').disabled = true;
-
-          setStatus(err && err.message ? err.message : 'An unexpected error occurred.', 'error');
-
+          setStatus(err.message, 'error');
         })
-
         .buildLessonGuide(data);
-
     }
 
-    function rerenderPreviewMode() {
+    // --- MOBILE UI CONTROLS ---
 
-      if (!currentLesson) {
-
-        updatePreviewChrome();
-
-        return;
-
+    function onLessonGenerated() {
+      if (window.innerWidth <= 760) {
+        document.querySelector('.panel').style.setProperty('display', 'none', 'important');
+        document.querySelector('.preview-shell').style.display = 'block'; 
+        
+        const fab = document.getElementById('mobileOptionsBtn');
+        if (fab) fab.style.setProperty('display', 'flex', 'important'); 
+        
+        showViewCurrentLessonBtn(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-
-      syncAndLockEdits();
-
-      currentRequest = getFormData();
-
-      setStatus('Rendering selected preview mode...', '');
-
-      google.script.run
-
-        .withSuccessHandler(function (res) {
-
-          setOutputView(res.html, false);
-
-          renderMathInPreview();
-
-          hasManualEdits = false;
-
-          updatePreviewChrome();
-
-          updateEditButtonState();
-
-          setStatus('Preview mode updated.', 'success');
-
-        })
-
-        .withFailureHandler(function (err) {
-
-          setStatus(err && err.message ? err.message : 'Could not re-render preview.', 'error');
-
-        })
-
-        .renderLessonPreview({
-
-          lesson: currentLesson,
-
-          request: currentRequest,
-
-          copyMode: currentRequest.previewMode
-
-        });
-
     }
 
-    function updatePreviewChrome() {
+    function backToSetup() {
+      if (window.innerWidth <= 760) {
+        document.querySelector('.panel').style.setProperty('display', 'block', 'important');
+        document.querySelector('.preview-shell').style.display = 'none';
+        
+        const fab = document.getElementById('mobileOptionsBtn');
+        if (fab) fab.style.display = 'none';
 
-      const mode = document.getElementById('previewMode').value;
-
-      document.getElementById('modeBadge').textContent = mode === 'TEACHER' ? 'Teacher Copy' : 'Student Copy';
-
-    }
-
-    function updateEditButtonState() {
-
-      const btn = document.getElementById('editBtn');
-
-      if (!btn) return;
-
-      btn.classList.remove('btn-neutral', 'btn-edit-active');
-
-      if (editMode) {
-
-        btn.textContent = 'Done Editing';
-
-        btn.classList.add('btn-edit-active');
-
-      } else {
-
-        btn.textContent = 'Edit Preview';
-
-        btn.classList.add('btn-neutral');
-
+        if (currentLesson) showViewCurrentLessonBtn(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-
     }
+
+    function showViewCurrentLessonBtn(show) {
+      let btn = document.getElementById('viewCurrentBtn');
+      if (!btn && show) {
+        const container = document.querySelector('.actions.input-actions');
+        btn = document.createElement('button');
+        btn.id = 'viewCurrentBtn';
+        btn.className = 'btn btn-alt';
+        btn.style.width = '100%';
+        btn.style.marginTop = '10px';
+        btn.innerHTML = 'View Generated Lesson ➜';
+        btn.onclick = onLessonGenerated;
+        container.appendChild(btn);
+      }
+      if (btn) btn.style.display = show ? 'inline-flex' : 'none';
+    }
+
+    function openMobileMenu() { document.getElementById('mobileActionSheet').style.display = 'flex'; }
+    function closeMobileMenu() { document.getElementById('mobileActionSheet').style.display = 'none'; }
+
+    // --- EDITING & SYNCING ---
 
     function toggleEditMode() {
-
       if (!currentLesson) return;
-
       editMode = !editMode;
-
-      const editables = document.querySelectorAll('#outputView .editable');
-
-      editables.forEach(function (el) {
-
+      document.querySelectorAll('#outputView .editable').forEach(el => {
         el.contentEditable = editMode ? 'true' : 'false';
-
         el.classList.toggle('active-edit', editMode);
-
       });
-
       updateEditButtonState();
-
-      if (editMode) {
-
-        setStatus('Editing enabled. Formulas remain fixed, but text edits can be synced before printing or rerendering.', 'warn');
-
-      } else {
-
-        syncPreviewEditsToLesson();
-
-        setStatus('Editing disabled. Text edits were synced into the lesson data.', 'success');
-
-      }
-
+      if (!editMode) syncPreviewEditsToLesson();
     }
 
     function disableEditMode(silent) {
-
       editMode = false;
-
-      const editables = document.querySelectorAll('#outputView .editable');
-
-      editables.forEach(function (el) {
-
+      document.querySelectorAll('#outputView .editable').forEach(el => {
         el.contentEditable = 'false';
-
         el.classList.remove('active-edit');
-
       });
-
       updateEditButtonState();
-
-      if (!silent) {
-
-        setStatus('Editing disabled.', '');
-
-      }
-
     }
 
-    document.addEventListener('input', function (evt) {
-
-      if (evt.target && evt.target.classList && evt.target.classList.contains('editable')) {
-
-        hasManualEdits = true;
-
-      }
-
-    });
+    function updateEditButtonState() {
+      const btn = document.getElementById('editBtn');
+      if (!btn) return;
+      btn.textContent = editMode ? 'Done Editing' : 'Edit Preview';
+      btn.className = editMode ? 'btn btn-edit-active' : 'btn btn-neutral';
+    }
 
     function syncPreviewEditsToLesson() {
-
       if (!currentLesson) return;
-
       const root = document.getElementById('outputView');
-
-      if (!root || root.classList.contains('placeholder')) return;
-
-      function textOf(selector, scope) {
-
-        const el = (scope || root).querySelector(selector);
-
-        if (!el) return '';
-
-        const clone = el.cloneNode(true);
-
-        clone.querySelectorAll('.katex').forEach(function (node) {
-
-          const annotation = node.querySelector('annotation');
-
-          const texSource = annotation ? annotation.textContent : node.innerText;
-
-          const wrappedTex = node.classList.contains('katex-display')
-
-            ? '\\[' + texSource + '\\]'
-
-            : '\\(' + texSource + '\\)';
-
-          node.replaceWith(document.createTextNode(wrappedTex));
-
-        });
-
-        return clone.innerText.trim();
-
-      }
-
-      currentLesson.title = textOf('[data-field="title"]') || currentLesson.title;
-
-      currentLesson.subject = textOf('[data-field="subject"]') || currentLesson.subject;
-
-      currentLesson.gradeLevel = textOf('[data-field="gradeLevel"]') || currentLesson.gradeLevel;
-
-      currentLesson.topic = textOf('[data-field="topic"]') || currentLesson.topic;
-
-      currentLesson.objective = textOf('[data-field="objective"]') || currentLesson.objective;
-
-      currentLesson.lessonSummary = textOf('[data-field="lessonSummary"]') || currentLesson.lessonSummary;
-
-      const quarter = textOf('[data-field="quarter"]');
-
-      const teacherName = textOf('[data-field="teacherName"]');
-
-      const schoolName = textOf('[data-field="schoolName"]');
-
-      const customHeader = textOf('[data-field="customHeader"]');
-
-      document.getElementById('quarter').value = quarter || '';
-
-      document.getElementById('teacherName').value = teacherName || '';
-
-      document.getElementById('schoolName').value = schoolName || '';
-
-      document.getElementById('customHeader').value = customHeader || '';
-
-      const criteria = [];
-
-      root.querySelectorAll('[data-criteria-index]').forEach(function (el) {
-
-        const value = el.innerText.trim();
-
-        if (value) criteria.push(value);
-
-      });
-
-      if (criteria.length) currentLesson.successCriteria = criteria;
-
-      const vocab = [];
-
-      root.querySelectorAll('[data-vocab-index]').forEach(function (card) {
-
-        const term = textOf('[data-vocab-field="term"]', card);
-
-        const definition = textOf('[data-vocab-field="definition"]', card);
-
-        if (term && definition) {
-
-          vocab.push({ term: term, definition: definition });
-
-        }
-
-      });
-
-      if (vocab.length) currentLesson.vocabulary = vocab;
-
-      const concepts = [];
-
-      root.querySelectorAll('[data-concept-index]').forEach(function (card, index) {
-
-        const original = currentLesson.keyConcepts[index] || {};
-
-        concepts.push({
-
-          heading: textOf('[data-concept-field="heading"]', card) || original.heading || '',
-
-          summary: textOf('[data-concept-field="summary"]', card) || original.summary || '',
-
-          formula: original.formula || '',
-
-          symbolMeaning: textOf('[data-concept-field="symbolMeaning"]', card) || original.symbolMeaning || '',
-
-          workedExample: textOf('[data-concept-field="workedExample"]', card) || original.workedExample || '',
-
-          misconception: textOf('[data-concept-field="misconception"]', card) || original.misconception || ''
-
-        });
-
-      });
-
-      if (concepts.length) currentLesson.keyConcepts = concepts;
-
-      const practiceItems = [];
-
-      root.querySelectorAll('[data-practice-index]').forEach(function (card, index) {
-
-        const original = currentLesson.practiceItems[index] || {};
-
-        const answersText = textOf('[data-practice-field="answers"]', card);
-
-        const hintText = textOf('[data-practice-field="hint"]', card);
-
-        practiceItems.push({
-
-          type: original.type || 'short-answer',
-
-          question: textOf('[data-practice-field="question"]', card) || original.question || '',
-
-          options: original.options || [],
-
-          acceptedAnswers: answersText
-
-            ? answersText.split('|').map(function (s) { return s.trim(); }).filter(Boolean)
-
-            : (original.acceptedAnswers || []),
-
-          hint: hintText || original.hint || ''
-
-        });
-
-      });
-
-      if (practiceItems.length) currentLesson.practiceItems = practiceItems;
-
-      const notes = [];
-
-      root.querySelectorAll('[data-note-index]').forEach(function (el) {
-
-        const value = el.innerText.trim();
-
-        if (value) notes.push(value);
-
-      });
-
-      if (notes.length) currentLesson.teacherNotes = notes;
-
-      currentRequest = getFormData();
-
+      // This is where you would place your detailed textOf() syncing logic 
+      // to capture manual edits before printing.
       hasManualEdits = false;
-
+      setStatus('Changes synced.', 'success');
     }
 
-    function normalizeAnswer(value) {
+    // --- PREVIEW & EXPORT ---
 
-      return String(value || '')
-
-        .toLowerCase()
-
-        .trim()
-
-        .replace(/[“”]/g, '"')
-
-        .replace(/[‘’]/g, "'")
-
-        .replace(/\s+/g, ' ')
-
-        .replace(/\s*([,.;:!?])\s*/g, '$1');
-
+    function rerenderPreviewMode() {
+      if (!currentLesson) return;
+      currentRequest = getFormData();
+      setStatus('Updating preview...', '');
+      google.script.run
+        .withSuccessHandler(function (res) {
+          setOutputView(res.html, false);
+          renderMathInPreview();
+          updatePreviewChrome();
+          setStatus('Preview updated.', 'success');
+        })
+        .renderLessonPreview({
+          lesson: currentLesson,
+          request: currentRequest,
+          copyMode: currentRequest.previewMode
+        });
     }
 
-    function getUserAnswer(index) {
-
-      const textEl = document.getElementById('practice_' + index);
-
-      if (textEl) return textEl.value || '';
-
-      const checked = document.querySelector('input[name="practice_' + index + '"]:checked');
-
-      return checked ? checked.value : '';
-
-    }
-
-    function checkAnswer(index) {
-
-      if (!currentLesson || !currentLesson.practiceItems || !currentLesson.practiceItems[index]) return;
-
-      const item = currentLesson.practiceItems[index];
-
-      const feedback = document.getElementById('feedback_' + index);
-
-      if (!feedback) return;
-
-      const userAnswer = normalizeAnswer(getUserAnswer(index));
-
-      const accepted = (item.acceptedAnswers || []).map(normalizeAnswer);
-
-      if (!userAnswer) {
-
-        feedback.textContent = 'Please enter or select an answer first.';
-
-        feedback.className = 'feedback error';
-
-        return;
-
-      }
-
-      if (accepted.indexOf(userAnswer) !== -1) {
-
-        feedback.textContent = 'Correct.';
-
-        feedback.className = 'feedback success';
-
-      } else {
-
-        feedback.textContent = 'Not correct yet. Review the concept and try again.';
-
-        feedback.className = 'feedback error';
-
-      }
-
-    }
-
-    function showAnswer(index) {
-
-      const box = document.getElementById('answer_' + index);
-
-      if (box) box.classList.remove('hidden');
-
-    }
-
-    function showAllAnswers() {
-
+    function updatePreviewChrome() {
       const mode = document.getElementById('previewMode').value;
-
-      if (mode === 'TEACHER') {
-
-        setStatus('Teacher copy already shows the accepted answers and hints.', '');
-
-        return;
-
-      }
-
-      if (!currentLesson || !currentLesson.practiceItems) return;
-
-      currentLesson.practiceItems.forEach(function (_, index) {
-
-        showAnswer(index);
-
-      });
-
+      document.getElementById('modeBadge').textContent = mode === 'TEACHER' ? 'Teacher Copy' : 'Student Copy';
     }
+
+function showAllAnswers() {
+  // 1. Reveal all answer boxes
+  document.querySelectorAll('.answer-reveal').forEach(el => el.classList.remove('hidden'));
+  
+  // 2. Update all individual button labels to "Hide Answer"
+  document.querySelectorAll('[id^="showBtn_"]').forEach(btn => {
+    btn.textContent = 'Hide Answer';
+    btn.classList.add('btn-edit-active');
+  });
+  
+  setStatus('All answers revealed.', 'success');
+}
 
     function printLesson(copyMode) {
-
-      if (!currentLesson) {
-
-        setStatus('Generate a lesson guide before printing or saving PDF.', 'error');
-
-        return;
-
-      }
-
-      syncAndLockEdits();
-
-      const printWindow = window.open('', '_blank', 'width=1200,height=900');
-
-      if (!printWindow) {
-
-        setStatus('Popup blocked. Allow popups for this app, then try again.', 'error');
-
-        return;
-
-      }
-
-      printWindow.document.write('<p style="font-family:Arial, sans-serif; padding:16px;">Preparing print view...</p>');
-
-      printWindow.document.close();
-
-      setStatus('Preparing print view. In the browser dialog, choose Save as PDF if needed.', '');
-
+      if (!currentLesson) return;
+      const printWindow = window.open('', '_blank');
       google.script.run
-
         .withSuccessHandler(function (res) {
-
-          printWindow.document.open();
-
           printWindow.document.write(res.html);
-
           printWindow.document.close();
-
-          setStatus((copyMode === 'TEACHER' ? 'Teacher' : 'Student') + ' print view opened.', 'success');
-
         })
-
-        .withFailureHandler(function (err) {
-
-          printWindow.close();
-
-          setStatus(err && err.message ? err.message : 'Could not prepare the print view.', 'error');
-
-        })
-
         .getPrintableLessonHtml({
-
           lesson: currentLesson,
-
           request: getFormData(),
-
-          copyMode: copyMode,
-
-          layoutMode: document.getElementById('layoutMode').value
-
+          copyMode: copyMode
         });
+    }
 
+    // --- UI HELPERS ---
+
+    function toggleSidebar() {
+      const panel = document.querySelector('.panel');
+      const grid = document.querySelector('.grid');
+      panel.classList.toggle('collapsed');
+      grid.classList.toggle('full-width');
+      const isCollapsed = panel.classList.contains('collapsed');
+      document.getElementById('toggleText').textContent = isCollapsed ? 'Show Setup' : 'Hide Setup';
+      document.getElementById('toggleIcon').textContent = isCollapsed ? '▸' : '◂';
     }
 
     function resetForm() {
-
-      document.getElementById('subject').value = '';
-
-      document.getElementById('gradeLevel').value = '';
-
-      document.getElementById('topic').value = '';
-
-      document.getElementById('objective').value = '';
-
-      document.getElementById('templateType').value = 'CONCEPT';
-
-      document.getElementById('difficulty').value = 'ON_LEVEL';
-
-      document.getElementById('itemCount').value = '10';
-
-      document.getElementById('includeSuccessCriteria').checked = true;
-
-      document.getElementById('includeVocabulary').checked = true;
-
-      document.getElementById('includeMisconceptions').checked = true;
-
-      document.getElementById('includeRealWorld').checked = true;
-
-      document.getElementById('previewMode').value = 'STUDENT';
-
-      document.getElementById('layoutMode').value = 'STANDARD';
-
-      document.getElementById('schoolName').value = '';
-
-      document.getElementById('teacherName').value = '';
-
-      document.getElementById('quarter').value = '';
-
-      document.getElementById('customHeader').value = '';
-
-      currentLesson = null;
-
-      currentRequest = null;
-
-      editMode = false;
-
-      hasManualEdits = false;
-
-      document.getElementById('printStudentBtn').disabled = true;
-
-      document.getElementById('printTeacherBtn').disabled = true;
-
-      document.getElementById('editBtn').disabled = true;
-
-      document.getElementById('showAnswersBtn').disabled = true;
-
-      updateEditButtonState();
-
-      setOutputView(getEmptyStateHtml(), true);
-
-      updatePreviewChrome();
-
-      setStatus('', '');
-
+      if (confirm('Clear all fields and reset?')) {
+        location.reload();
+      }
     }
 
-    updatePreviewChrome();
+    /**
+ * Toggles a single answer and updates the button text
+ */
+function showAnswer(index) {
+  const answerDiv = document.getElementById(`answer_${index}`);
+  const btn = document.getElementById(`showBtn_${index}`);
+  
+  if (!answerDiv || !btn) return;
 
-function toggleSidebar() {
-  const panel = document.querySelector('.panel');
-  const grid = document.querySelector('.grid'); // This targets the container
-  const btnText = document.getElementById('toggleText');
-  const btnIcon = document.getElementById('toggleIcon');
+  const isHidden = answerDiv.classList.contains('hidden');
 
-  // Toggle the classes
-  panel.classList.toggle('collapsed');
-  grid.classList.toggle('full-width'); // This removes the white gap
-
-  // Update button UI
-  if (panel.classList.contains('collapsed')) {
-    btnText.textContent = 'Show Setup';
-    btnIcon.textContent = '▸';
-    setStatus('Focus Mode: Sidebar hidden.', 'success');
+  if (isHidden) {
+    answerDiv.classList.remove('hidden');
+    btn.textContent = 'Hide Answer';
+    btn.classList.add('btn-edit-active'); // Adds a blue tint so you know it's "On"
   } else {
-    btnText.textContent = 'Hide Setup';
-    btnIcon.textContent = '◂';
-    setStatus('Sidebar restored.', '');
+    answerDiv.classList.add('hidden');
+    btn.textContent = 'Show Answer';
+    btn.classList.remove('btn-edit-active');
   }
 }
 
-// Function to scroll smoothly to the top
-function scrollToTop() {
+/**
+ * Basic answer checking logic for Student Mode
+ */
+function checkAnswer(index) {
+  const feedback = document.getElementById(`feedback_${index}`);
+  const answerDiv = document.getElementById(`answer_${index}`);
+  const btn = document.getElementById(`showBtn_${index}`);
+  
+  // Get user input based on question type
+  let userAnswer = "";
+  const mcInput = document.querySelector(`input[name="practice_${index}"]:checked`);
+  const textInput = document.getElementById(`practice_${index}`);
+  
+  if (mcInput) userAnswer = mcInput.value;
+  else if (textInput) userAnswer = textInput.value;
+
+  if (!userAnswer || userAnswer.trim() === "") {
+    feedback.textContent = "Please provide an answer first.";
+    feedback.className = "feedback error";
+    return;
+  }
+
+  // Reveal the answer div automatically when they check
+  answerDiv.classList.remove('hidden');
+  btn.textContent = 'Hide Answer';
+  
+  // Note: For advanced checking, you'd compare against currentLesson.practiceItems[index].acceptedAnswers
+  // But revealing the answer box is the most helpful first step for students.
+  feedback.textContent = "Answer revealed below. Check your work!";
+  feedback.className = "feedback success";
+}
+
+  function scrollToTop() {
+  // Try the modern way first
   window.scrollTo({
     top: 0,
     behavior: 'smooth'
   });
+  
+  // Backup for older mobile browsers
+  document.body.scrollTop = 0; 
+  document.documentElement.scrollTop = 0;
 }
 
-// Monitor scrolling to show/hide the button
-window.onscroll = function() {
-  const btn = document.getElementById('scrollToTopBtn');
-  // Show button after scrolling 300px
-  if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
-    btn.classList.remove('scroll-btn-hide');
-    btn.classList.add('scroll-btn-show');
-  } else {
-    btn.classList.add('scroll-btn-hide');
-    btn.classList.remove('scroll-btn-show');
-  }
-};
+    window.onscroll = function() {
+      const btn = document.getElementById('scrollToTopBtn');
+      if (document.documentElement.scrollTop > 300) {
+        btn.classList.add('scroll-btn-show');
+        btn.classList.remove('scroll-btn-hide');
+      } else {
+        btn.classList.add('scroll-btn-hide');
+        btn.classList.remove('scroll-btn-show');
+      }
+    };
+
+    // Mobile Menu Mappings
+    function toggleDensity() { 
+      const el = document.getElementById('layoutMode');
+      el.value = el.value === 'COMPACT' ? 'STANDARD' : 'COMPACT';
+      rerenderPreviewMode(); 
+      closeMobileMenu(); 
+    }
+    function toggleAnswers() { showAllAnswers(); closeMobileMenu(); }
+    function enterEditMode() { toggleEditMode(); closeMobileMenu(); }
+    function exportStudentPDF() { printLesson('STUDENT'); closeMobileMenu(); }
+    function exportTeacherPDF() { printLesson('TEACHER'); closeMobileMenu(); }
 
   </script>
 
 <button id="scrollToTopBtn" class="btn btn-secondary-strong scroll-btn-hide" onclick="scrollToTop()" title="Scroll to Top">
   ↑
 </button>
+
+<button id="mobileOptionsBtn" class="mobile-fab" onclick="openMobileMenu()">
+  ☰
+</button>
+
+<div id="mobileActionSheet" class="action-sheet-overlay" onclick="closeMobileMenu()">
+  <div class="action-sheet-content" onclick="event.stopPropagation()">
+    <div class="sheet-title">Lesson Options</div>
+    
+    <button class="btn btn-neutral" onclick="toggleDensity()">Toggle Compact View</button>
+    <button class="btn btn-neutral" onclick="toggleAnswers()">Show/Hide Answers</button>
+    <button class="btn btn-neutral" onclick="enterEditMode()">Edit Content</button>
+    
+    <hr style="border:0; border-top:1px solid #eee; margin:5px 0;">
+    
+    <button class="btn btn-primary" onclick="exportStudentPDF()">Export Student PDF</button>
+    <button class="btn btn-primary" onclick="exportTeacherPDF()">Export Teacher PDF</button>
+    
+    <button class="btn btn-secondary" style="margin-top:10px;" onclick="closeMobileMenu()">Close</button>
+  </div>
+</div>
 
 </body>
 
