@@ -3292,3 +3292,45 @@ function createPdfFromHtml(htmlString, filename) {
     throw new Error("Drive Save Error: " + e.message);
   }
 }
+
+/**
+ * Deletes a single lesson row based on its unique timestamp and topic
+ */
+function deleteLessonFromSheet(timestamp, topic) {
+  const props = PropertiesService.getScriptProperties();
+  const sheetId = props.getProperty('SHEET_ID');
+  const ss = SpreadsheetApp.openById(sheetId);
+  const sheet = ss.getSheetByName("Logs");
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = data.length - 1; i > 0; i--) {
+    const rowDate = Utilities.formatDate(new Date(data[i][0]), "GMT+8", "MMM dd, yyyy HH:mm");
+    const rowTopic = data[i][4].split('|')[0].replace('TOPIC: ', '').trim();
+    
+    if (rowDate === timestamp && rowTopic === topic) {
+      sheet.deleteRow(i + 1);
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * CLEARS EVERYTHING for the current user
+ */
+function clearAllUserHistory() {
+  const props = PropertiesService.getScriptProperties();
+  const sheetId = props.getProperty('SHEET_ID');
+  const email = Session.getActiveUser().getEmail();
+  const ss = SpreadsheetApp.openById(sheetId);
+  const sheet = ss.getSheetByName("Logs");
+  const data = sheet.getDataRange().getValues();
+  
+  // Delete rows from bottom to top to avoid index shifting
+  for (let i = data.length - 1; i > 0; i--) {
+    if (data[i][1] === email) {
+      sheet.deleteRow(i + 1);
+    }
+  }
+  return true;
+}
