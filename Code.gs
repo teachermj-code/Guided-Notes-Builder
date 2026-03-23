@@ -367,70 +367,72 @@ function generateLessonJson_(request) {
   const schema = getLessonSchema_(request);
   const prompt = buildPrompt_(request);
   const url = buildGeminiUrl_(config.apiKey, config.model);
-  let lastError = 'Unknown generation error.';
-  let outputText = '';
+  let lastError = '';
+
   for (let attempt = 1; attempt <= 2; attempt++) {
     const payload = {
-      contents: [
-        {
-          parts: [
-            {
-              text:
-                prompt +
-                (attempt === 2
-                  ? '\n\nReturn JSON only. No markdown fences. No commentary. Every string must be properly quoted and escaped. Follow the schema exactly.'
-                  : '')
-            }
-          ]
-        }
-      ],
+      contents: [{
+        parts: [{
+          text: prompt + (attempt === 2 ? '\n\nIMPORTANT: Return valid JSON only. Ensure all fields are filled.' : '')
+        }]
+      }],
       generationConfig: {
         maxOutputTokens: 8192,
         responseMimeType: 'application/json',
         responseJsonSchema: schema
       }
     };
+
     const response = UrlFetchApp.fetch(url, {
       method: 'post',
       contentType: 'application/json',
       payload: JSON.stringify(payload),
       muteHttpExceptions: true
     });
+
     const status = response.getResponseCode();
     const text = response.getContentText();
+
+    // 1. Handle API/Network Errors
     if (status !== 200) {
-      lastError = extractApiError_(text) || ('Gemini API request failed with status ' + status + '.');
+      lastError = "The AI service is temporarily unavailable (Status " + status + "). Please wait a moment and try again.";
       continue;
     }
+
     try {
       const raw = JSON.parse(text);
-      outputText = extractCandidateText_(raw);
-      if (!outputText) {
-        lastError = 'Gemini returned an empty response.';
-        continue;
-      }
+      const outputText = extractCandidateText_(raw);
+      
+      if (!outputText) throw new Error("Empty AI response");
+
       const cleanedJson = extractJsonText_(outputText);
       const parsed = JSON.parse(cleanedJson);
+      
+      // Normalize and Validate
       const lesson = normalizeLesson_(parsed, request);
       validateLesson_(lesson, request);
+      
       return lesson;
+
     } catch (err) {
+      // 2. Handle Formatting/Validation Errors
       try {
-        const repaired = repairLessonJson_(outputText || text, schema, config.apiKey, config.model);
+        const repaired = repairLessonJson_(text, schema, config.apiKey, config.model);
         const lesson = normalizeLesson_(repaired, request);
         validateLesson_(lesson, request);
         return lesson;
       } catch (repairErr) {
-        lastError =
-          'Could not parse or validate lesson JSON: ' +
-          err.message +
-          ' | Repair attempt failed: ' +
-          repairErr.message;
+        lastError = "The AI had trouble organizing the content for this specific topic. Try simplifying your topic name or checking your internet connection.";
+        // Log the real error to your console for debugging
+        console.error("Technical Error Details:", err.message, "| Repair Error:", repairErr.message);
       }
     }
   }
-  throw new Error(lastError);
+
+  // 3. Final Fallback Error
+  throw new Error(lastError || "We couldn't generate the lesson guide. Please refine your topic and try again.");
 }
+
 function buildGeminiUrl_(apiKey, model) {
   return (
     'https://generativelanguage.googleapis.com/v1beta/' +
@@ -968,6 +970,7 @@ function normalizeLesson_(lesson, fallbackRequest) {
   const base = lesson || {};
   const req = fallbackRequest || {};
   const expectedItemCount = toBoundedInteger_(req.itemCount, DEFAULT_ITEM_COUNT, 5, 20);
+
   lesson.practiceItems = (lesson.practiceItems || []).slice(0, expectedItemCount);
   const keyConcepts = Array.isArray(base.keyConcepts) ? base.keyConcepts : [];
   const practiceItems = Array.isArray(base.practiceItems) ? base.practiceItems : [];
@@ -2891,7 +2894,15 @@ function guidance_(lines) { return lines.map(line => `- ${line}`).join('\n'); }
  * Records app activity to the Logs tab.
  * Columns: Timestamp | Email Address | Status | Details | GeneratedContent
  */
-function writeToLog_(status, details, request = null) {
+/**
+ * Records app activity to the Logs tab.
+ * Enhanced to act as a database for generated lessons.
+ */
+/**
+ * Records app activity to the Logs tab.
+ * Column F now stores the raw JSON so lessons can be re-opened without AI costs.
+ */
+function writeToLog_(status, details, request = null, lesson = null) {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty('SHEET_ID');
   
@@ -2903,36 +2914,43 @@ function writeToLog_(status, details, request = null) {
   try {
     const ss = SpreadsheetApp.openById(sheetId);
     const sheet = ss.getSheetByName("Logs");
-    if (!sheet) {
-      console.warn("Logs tab not found in spreadsheet.");
-      return;
-    }
+    if (!sheet) return;
 
     const timestamp = new Date();
-    // Gets the email of the person currently using the app
     const email = Session.getActiveUser().getEmail() || "Unknown User";
 
-    // 1. Format the "GeneratedContent" for Column E
-    // We take the request object and turn it into a readable string
     let contentSummary = "N/A"; 
-    if (request && typeof request === 'object') {
+    let fullJsonData = ""; // This will go in Column F
+    
+    if (lesson && typeof lesson === 'object') {
+      contentSummary = [
+        `TOPIC: ${lesson.topic}`,
+        `ITEMS: ${lesson.practiceItems ? lesson.practiceItems.length : 0}`,
+        `SUMMARY: ${lesson.lessonSummary ? lesson.lessonSummary.substring(0, 80) + '...' : 'N/A'}`
+      ].join(" | ");
+      
+      // CRITICAL: Convert the object to a string so the sheet can store it
+      fullJsonData = JSON.stringify(lesson);
+    } 
+    else if (request && typeof request === 'object') {
       contentSummary = [
         `Subject: ${request.subject || 'N/A'}`,
-        `Level: ${request.gradeLevel || 'N/A'}`,
         `Topic: ${request.topic || 'N/A'}`,
         `Template: ${request.templateType || 'N/A'}`
       ].join(" | ");
-    } else if (typeof request === 'string') {
-      contentSummary = request; // Handle case where request might just be a string
+    } 
+    else if (typeof request === 'string') {
+      contentSummary = request;
     }
 
-    // 2. Append the row to match your 5 headers
+    // Append to Spreadsheet (6 Columns total)
     sheet.appendRow([
-      timestamp,      // Column A: Timestamp
-      email,          // Column B: Email Address
-      status,         // Column C: Status (SUCCESS/ERROR/DENIED)
-      details,        // Column D: Details (Message)
-      contentSummary  // Column E: GeneratedContent (Metadata)
+      timestamp,      // A: Timestamp
+      email,          // B: Email Address
+      status,         // C: Status
+      details,        // D: Details
+      contentSummary, // E: Content Summary
+      fullJsonData    // F: THE DATA VAULT (Hidden JSON)
     ]);
     
   } catch (e) {
@@ -3006,7 +3024,75 @@ function createBlanks_(text, vocabulary) {
   return processedText;
 }
 
+/**
+ * Saves the generated lesson as a Google Doc in a specific Drive folder
+ */
+function saveLessonToDrive(payload) {
+  try {
+    const folderName = "My Lesson Guides";
+    let folder;
+    const folders = DriveApp.getFoldersByName(folderName);
+    
+    if (folders.hasNext()) {
+      folder = folders.next();
+    } else {
+      folder = DriveApp.createFolder(folderName);
+    }
 
+    // Create a temporary HTML blob
+    const htmlBlob = Utilities.newBlob(payload.html, 'text/html', payload.filename.replace('.pdf', '.html'));
+    
+    // Create the Google Doc by converting the HTML blob
+    const file = DriveApp.createFile(htmlBlob);
+    const docFile = DriveApp.getFileById(file.getId());
+    
+    // Move to the designated folder
+    folder.addFile(docFile);
+    DriveApp.getRootFolder().removeFile(docFile);
+
+    return { 
+      success: true, 
+      url: docFile.getUrl(),
+      name: docFile.getName() 
+    };
+  } catch (e) {
+    throw new Error("Drive Save Failed: " + e.toString());
+  }
+}
+
+/**
+ * Fetches the current user's generation history from the Logs sheet.
+ */
+function getUserHistory() {
+  const props = PropertiesService.getScriptProperties();
+  const sheetId = props.getProperty('SHEET_ID');
+  const email = Session.getActiveUser().getEmail();
+  
+  try {
+    const ss = SpreadsheetApp.openById(sheetId);
+    const sheet = ss.getSheetByName("Logs");
+    const data = sheet.getDataRange().getValues();
+    
+    // Filter rows: Must be this user, must be SUCCESS, and Column F (index 5) must not be empty
+    const history = data.slice(1) 
+      .filter(row => row[1] === email && row[2] === "SUCCESS" && row[5]) 
+      .map(row => ({
+        timestamp: Utilities.formatDate(new Date(row[0]), "GMT+8", "MMM dd, yyyy HH:mm"),
+        details: row[3],
+        summary: row[4],
+        // Pull the topic directly from the summary string
+        topic: row[4].split('|')[0].replace('TOPIC: ', '').trim(),
+        // NEW: Grab the hidden JSON string from Column F
+        fullJson: row[5] 
+      }))
+      .reverse(); 
+
+    return history.slice(0, 20); 
+  } catch (e) {
+    console.error("History Fetch Failed: " + e.toString());
+    return [];
+  }
+}
 
 
 
