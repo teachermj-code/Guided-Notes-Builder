@@ -5,6 +5,7 @@
 /***************************************
  * 1. CONFIG
  ***************************************/
+ // DriveApp.getFoldersByName("Force Auth");
 const APP_CONFIG = Object.freeze({
   title: 'Lesson Guide Builder by Teacher MJ',
   defaultModel: 'models/gemini-flash-latest',
@@ -266,7 +267,7 @@ function buildLessonGuide(formData) {
     // Status: SUCCESS
     // Details: "Lesson Generated Successfully"
     // Content: Passing the 'request' object for Column E
-    writeToLog_("SUCCESS", "Lesson Generated Successfully", request);
+    writeToLog_("SUCCESS", "Lesson Generated Successfully", request, lesson);
 
     return {
       ok: true,
@@ -447,13 +448,13 @@ function buildPrompt_(request) {
   const templateFieldBehavior = getTemplateFieldBehavior_(request.templateType);
   const localContextGuidance = getLocalContextGuidance_();
   const difficultyGuidance = getDifficultyGuidance_(request.difficulty);
-  const practiceDesignGuidance = getPracticeDesignGuidance_(
-    request.templateType,
-    request.difficulty
-  );
+  const practiceDesignGuidance = getPracticeDesignGuidance_(request.templateType, request.difficulty);
   return [
     'You are an expert instructional content generator for classroom teachers.',
     'Create a classroom-ready lesson guide in JSON only.',
+    '',
+    'Grade-specific rule (CRITICAL):',
+    'If Grade Level contains "Grade 1", "Grade 2", "Kinder", or "Kindergarten", NEVER use variables (x, y, a, b), letters in equations, or algebraic notation. Use ONLY concrete numbers, pictures, counting, and simple addition/subtraction up to 20. Keep everything extremely visual and concrete.',
     '',
     'Required output:',
     '- Return valid JSON only.',
@@ -500,7 +501,8 @@ function buildPrompt_(request) {
     '- Use \\[...\\] for standalone calculations or important formulas.',
     '- Do not use markdown fences.',
     '- Return JSON only.',
-    '- Because the output is JSON, every backslash inside KaTeX must be escaped as double backslashes, for example \\\\frac{3}{4} and \\\\times.',
+    '- Because the output is JSON, every backslash inside KaTeX must be escaped as double backslashes.',
+    '- For missing addends or blanks in math, use a simple "___" (three underscores) instead of \\text{___}.',
     '',
     'Instructional settings:',
     'Subject: ' + request.subject,
@@ -1422,28 +1424,37 @@ function renderObjectiveSection_(lesson) {
       </div>
     </section>
   `;
+
 }
 function renderSuccessCriteriaSection_(lesson) {
   if (!lesson.successCriteria || !lesson.successCriteria.length) {
     return '';
   }
+  
+  // 🛡️ THE CHECKBOX FIX: Using a table guarantees the PDF engine won't convert them to bullets
+  const listHtml = lesson.successCriteria.map(function (item, index) {
+    return `
+      <tr>
+        <td style="width: 25px; vertical-align: top; font-size: 18px; line-height: 1;">&#9744;</td>
+        <td style="vertical-align: top; padding-bottom: 8px;">
+          <div class="editable criteria-text" data-criteria-index="${index}">${escapeHtml_(item)}</div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
   return `
     <section>
       <h2 class="section-title">Success Criteria</h2>
       <div class="card">
-        <ul class="criteria-list">
-          ${lesson.successCriteria.map(function (item, index) {
-    return `
-            <li>
-              <div class="editable criteria-text" data-criteria-index="${index}">${escapeHtml_(item)}</div>
-            </li>
-          `;
-  }).join('')}
-        </ul>
+        <table style="width: 100%; border-collapse: collapse; border: none; margin: 0; padding: 0;">
+          ${listHtml}
+        </table>
       </div>
     </section>
   `;
 }
+
 function renderVocabularySection_(lesson, compact) {
   if (!lesson.vocabulary || !lesson.vocabulary.length) {
     return '';
@@ -2195,23 +2206,58 @@ function renderPrintableLessonHtml_(lesson, options) {
 }
 
 function renderPrintHeaderHtml_(lesson, teacherView, headerInfo) {
+  // Styles for the PDF engine to read directly
+  const cellStyle = "width: 33.3%; background-color: #f5f9ff; border: 1px solid #d9e6ff; border-radius: 8px; padding: 10px; vertical-align: top;";
+  const labelStyle = "font-size: 9px; font-weight: bold; color: #5b6b82; margin-bottom: 2px; text-transform: uppercase;";
+  const valueStyle = "font-size: 12px; font-weight: 600; color: #1c2e45;";
+
   return `
-    <header class="print-lesson-header">
-      <div class="print-doc-banner">
-        ${headerInfo.schoolName ? `<div class="print-school-name">${escapeHtml_(headerInfo.schoolName)}</div>` : ''}
-        ${headerInfo.customHeader ? `<div class="print-custom-header">${escapeHtml_(headerInfo.customHeader)}</div>` : ''}
+    <header style="font-family: Arial, sans-serif; border-top: 5px solid #0052cc; padding-top: 15px; margin-bottom: 20px;">
+      <div style="margin-bottom: 10px;">
+        ${headerInfo.schoolName ? `<div style="font-size: 16px; font-weight: bold; color: #0f2747;">${escapeHtml_(headerInfo.schoolName)}</div>` : ''}
+        ${headerInfo.customHeader ? `<div style="font-size: 12px; color: #5b6b82;">${escapeHtml_(headerInfo.customHeader)}</div>` : ''}
       </div>
-      <div class="print-eyebrow">${teacherView ? 'Teacher Copy' : 'Student Copy'}</div>
-      <h1 class="print-lesson-title">${escapeHtml_(lesson.title)}</h1>
-      <div class="print-header-grid">
-        <div class="print-meta-column"><div class="print-meta-label">Subject</div><div class="print-meta-value">${escapeHtml_(lesson.subject)}</div></div>
-        <div class="print-meta-column"><div class="print-meta-label">Grade Level</div><div class="print-meta-value">${escapeHtml_(lesson.gradeLevel)}</div></div>
-        <div class="print-meta-column"><div class="print-meta-label">Topic</div><div class="print-meta-value">${escapeHtml_(lesson.topic)}</div></div>
-        <div class="print-meta-column"><div class="print-meta-label">Template</div><div class="print-meta-value">${prettyEnum_(lesson.templateType)}</div></div>
-        <div class="print-meta-column"><div class="print-meta-label">Difficulty</div><div class="print-meta-value">${prettyEnum_(lesson.difficulty)}</div></div>
-        <div class="print-meta-column"><div class="print-meta-label">Quarter</div><div class="print-meta-value">${escapeHtml_(headerInfo.quarter || 'N/A')}</div></div>
-        <div class="print-teacher-full-row"><div class="print-meta-label">Teacher Name</div><div class="print-meta-value">${escapeHtml_(headerInfo.teacherName || '')}</div></div>
+      <div style="font-size: 11px; font-weight: bold; color: #0052cc; margin-bottom: 5px;">
+        ${teacherView ? 'TEACHER COPY' : 'STUDENT COPY'}
       </div>
+      <h1 style="font-size: 24px; margin: 0 0 15px 0; color: #0f2747;">${escapeHtml_(lesson.title)}</h1>
+
+      <table style="width: 100%; border-collapse: separate; border-spacing: 5px; table-layout: fixed;">
+        <tr>
+          <td style="${cellStyle}">
+            <div style="${labelStyle}">Subject</div>
+            <div style="${valueStyle}">${escapeHtml_(lesson.subject)}</div>
+          </td>
+          <td style="${cellStyle}">
+            <div style="${labelStyle}">Grade Level</div>
+            <div style="${valueStyle}">${escapeHtml_(lesson.gradeLevel)}</div>
+          </td>
+          <td style="${cellStyle}">
+            <div style="${labelStyle}">Topic</div>
+            <div style="${valueStyle}">${escapeHtml_(lesson.topic)}</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="${cellStyle}">
+            <div style="${labelStyle}">Template</div>
+            <div style="${valueStyle}">${prettyEnum_(lesson.templateType)}</div>
+          </td>
+          <td style="${cellStyle}">
+            <div style="${labelStyle}">Difficulty</div>
+            <div style="${valueStyle}">${prettyEnum_(lesson.difficulty)}</div>
+          </td>
+          <td style="${cellStyle}">
+            <div style="${labelStyle}">Quarter</div>
+            <div style="${valueStyle}">${escapeHtml_(headerInfo.quarter || 'N/A')}</div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="3" style="background-color: #f5f9ff; border: 1px solid #d9e6ff; border-radius: 8px; padding: 10px;">
+            <div style="${labelStyle}">Teacher Name</div>
+            <div style="${valueStyle}">${escapeHtml_(headerInfo.teacherName || '')}</div>
+          </td>
+        </tr>
+      </table>
     </header>
   `;
 }
@@ -2712,6 +2758,7 @@ function getSharedStyles_() {
  ***************************************/
 function repairLatexText_(value) {
   return String(value == null ? '' : value)
+  .replace(/\\text\{__+\}/g, '___') // Converts \text{___} to a plain string for easier rendering
     .replace(/\u0008(?=[A-Za-z])/g, '\\b')
     .replace(/\u000c(?=[A-Za-z])/g, '\\f')
     .replace(/\r(?=[A-Za-z])/g, '\\r')
@@ -2959,50 +3006,59 @@ function writeToLog_(status, details, request = null, lesson = null) {
 }
 
 function renderGuidedNotesTemplate_(lesson, teacherView, forPrint) {
+  // 1. Safety check: Ensure practiceItems and keyConcepts exist to avoid crashes
   const practiceItems = lesson.practiceItems || [];
+  const keyConcepts = lesson.keyConcepts || [];
   const splitIndex = Math.ceil(practiceItems.length / 2);
   
-  // Custom "I Can" formatter
+  // 2. Custom "I Can" formatter (Fixed to handle empty criteria)
   const objectivesHtml = (lesson.successCriteria && lesson.successCriteria.length) 
-    ? lesson.successCriteria.map(sc => `<li>I can ${sc.replace(/^I can\s+/i, '')}</li>`).join('')
+    ? lesson.successCriteria.map(sc => `<li>I can ${escapeHtml_(sc.replace(/^I can\s+/i, ''))}</li>`).join('')
     : `<li>I can explain the core concepts of ${escapeHtml_(lesson.topic)}</li>`;
 
-  // Map Key Concepts and Solved Examples from the AI's generated keyConcepts array
-  const conceptsHtml = lesson.keyConcepts.map(item => 
-    `<div class="sub-card"><strong>${escapeHtml_(item.heading)}:</strong> ${createBlanks_(item.summary, lesson.vocabulary)}</div>`
-  ).join('');
+  // 3. Map Key Concepts with Cloze (Fill-in-the-blanks) logic
+  const conceptsHtml = keyConcepts.length > 0 
+    ? keyConcepts.map(item => 
+        `<div class="sub-card"><strong>${escapeHtml_(item.heading)}:</strong> ${createBlanks_(item.summary, lesson.vocabulary)}</div>`
+      ).join('')
+    : `<div class="card">No key concepts generated.</div>`;
 
-  const solvedExamplesHtml = lesson.keyConcepts.map(item => 
-    `<div class="example-box"><strong>Example: ${escapeHtml_(item.heading)}</strong><br>${item.workedExample}</div>`
-  ).join('');
+  // 4. Map Solved Examples 
+  // Note: We use escapeHtml_ on the heading, but NOT on workedExample 
+  // because workedExample usually contains KaTeX/HTML tags for math.
+  const solvedExamplesHtml = keyConcepts.length > 0
+    ? keyConcepts.map(item => 
+        `<div class="example-box"><strong>Example: ${escapeHtml_(item.heading)}</strong><br>${item.workedExample || ''}</div>`
+      ).join('')
+    : `<div class="card">No examples available.</div>`;
 
   return [
-    // 1. Title (Centered CAPS)
-    `<section style="text-align:center;"><h2 style="text-transform:uppercase; font-weight:800;">${escapeHtml_(lesson.title)}</h2></section>`,
+    // 1. Title (Centered CAPS) - Added 24px font size for better hierarchy
+    `<section style="text-align:center;"><h2 style="text-transform:uppercase; font-weight:800; font-size:24px; margin-bottom:20px;">${escapeHtml_(lesson.title)}</h2></section>`,
     
     // 2. Objectives (I can statements)
     `<section><h2 class="section-title">Objectives</h2><div class="card"><ul class="criteria-list">${objectivesHtml}</ul></div></section>`,
     
-    // 3. Key Concepts (Not all caps)
+    // 3. Key Concepts (Not all caps section title)
     `<section><h2 class="section-title" style="text-transform:none;">Key Concepts</h2><div class="card">${conceptsHtml}</div></section>`,
     
-    // 4. Solved Examples (Not all caps)
+    // 4. Solved Examples (Not all caps section title)
     `<section><h2 class="section-title" style="text-transform:none;">Solved Examples</h2>${solvedExamplesHtml}</section>`,
     
-    // 5. Guided Practice (First half of items)
+    // 5. Guided Practice (First half)
     renderPracticeGroupSection_(lesson, teacherView, forPrint, {
       title: 'Guided Practice',
       note: 'Complete these with your teacher.'
     }, 0, splitIndex),
     
-    // 6. Individual Practice (Second half of items)
+    // 6. Individual Practice (Second half)
     renderPracticeGroupSection_(lesson, teacherView, forPrint, {
       title: 'Individual Practice',
       note: 'Show what you have learned.'
     }, splitIndex, practiceItems.length),
     
     // 7. Wrap Up (Statement form summary)
-    `<section><h2 class="section-title">Wrap Up</h2><div class="card"><div class="section-note" style="font-style:normal;">${escapeHtml_(lesson.lessonSummary)}</div></div></section>`
+    `<section><h2 class="section-title">Wrap Up</h2><div class="card"><div class="section-note" style="font-style:normal;">${escapeHtml_(lesson.lessonSummary || 'Lesson complete.')}</div></div></section>`
   ].join('');
 }
 
@@ -3024,41 +3080,6 @@ function createBlanks_(text, vocabulary) {
   return processedText;
 }
 
-/**
- * Saves the generated lesson as a Google Doc in a specific Drive folder
- */
-function saveLessonToDrive(payload) {
-  try {
-    const folderName = "My Lesson Guides";
-    let folder;
-    const folders = DriveApp.getFoldersByName(folderName);
-    
-    if (folders.hasNext()) {
-      folder = folders.next();
-    } else {
-      folder = DriveApp.createFolder(folderName);
-    }
-
-    // Create a temporary HTML blob
-    const htmlBlob = Utilities.newBlob(payload.html, 'text/html', payload.filename.replace('.pdf', '.html'));
-    
-    // Create the Google Doc by converting the HTML blob
-    const file = DriveApp.createFile(htmlBlob);
-    const docFile = DriveApp.getFileById(file.getId());
-    
-    // Move to the designated folder
-    folder.addFile(docFile);
-    DriveApp.getRootFolder().removeFile(docFile);
-
-    return { 
-      success: true, 
-      url: docFile.getUrl(),
-      name: docFile.getName() 
-    };
-  } catch (e) {
-    throw new Error("Drive Save Failed: " + e.toString());
-  }
-}
 
 /**
  * Fetches the current user's generation history from the Logs sheet.
@@ -3095,5 +3116,109 @@ function getUserHistory() {
 }
 
 
+/**
+ * Receives the perfectly formatted PDF from the browser and saves it.
+ * This version handles both raw base64 and Data-URI prefixed strings.
+ */
+function saveLessonToDrive(lessonObj, requestObj, copyModeStr, filenameStr) {
+  if (!lessonObj) throw new Error('Lesson data dropped. Try again.');
 
+  try {
+    const printData = getPrintableLessonHtml({
+      lesson: lessonObj,
+      request: requestObj || {},
+      copyMode: copyModeStr || 'STUDENT'
+    });
+    
+    let finalHtml = printData.html;
+    
+    // 🛠️ THE MATH FIX: Convert KaTeX text into crisp Math Images!
+    // 1. Convert Display Math: \[ ... \]
+    finalHtml = finalHtml.replace(/\\\[([\s\S]*?)\\\]/g, function(match, mathStr) {
+      const cleanMath = mathStr.trim();
+      // If it's incredibly simple, just leave it as text (no image needed)
+      if (/^[a-zA-Z0-9\+\-\=\s]+$/.test(cleanMath)) {
+          return `<div style="text-align:center; margin:10px 0; font-family: monospace; font-size: 16px;">${cleanMath}</div>`;
+      }
+      const enc = encodeURIComponent(cleanMath);
+      return `<div style="text-align:center; margin:10px 0;"><img src="https://chart.googleapis.com/chart?cht=tx&chl=${enc}" style="max-width:100%;" alt="Math Equation" /></div>`;
+    });
+    
+    // 2. Convert Inline Math: \( ... \)
+    finalHtml = finalHtml.replace(/\\\(([\s\S]*?)\\\)/g, function(match, mathStr) {
+      const cleanMath = mathStr.trim();
+      
+      // 🛡️ THE FIX: If the match is JUST an equal sign, plus sign, or simple text, just print the text.
+      if (cleanMath === '=' || cleanMath === '+' || cleanMath === '-' || cleanMath === '/' || /^[a-zA-Z0-9\s]+$/.test(cleanMath)) {
+          return `<span style="font-family: monospace; font-size: 14px;">${cleanMath}</span>`;
+      }
+      
+      // Otherwise, generate the image for fractions, exponents, etc.
+      const enc = encodeURIComponent(cleanMath);
+      return `<img src="https://chart.googleapis.com/chart?cht=tx&chl=${enc}" style="vertical-align:middle; max-height: 1.5em;" alt="Math" />`;
+    });
 
+    // Setup Drive Folder
+    const folderName = "Lesson Guide by Teacher MJ - PDF";
+    const folders = DriveApp.getFoldersByName(folderName);
+    const folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+    
+    // Create and Save PDF
+    const blob = Utilities.newBlob(finalHtml, 'text/html', filenameStr || 'lesson.pdf')
+                          .getAs('application/pdf');
+    
+    const file = folder.createFile(blob);
+    
+    return { 
+      success: true, 
+      folderUrl: folder.getUrl(), 
+      fileUrl: file.getUrl() 
+    };
+  } catch (e) {
+    throw new Error("Drive Save Error: " + e.message);
+  }
+}
+
+function createPdfFromHtml(htmlString, filename) {
+  try {
+    // We wrap the pre-rendered HTML with the necessary CSS so the math fractions stack correctly
+    const fullHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+          <style>
+            ${getPrintDesignTokensCss_()}
+            ${getPrintBaseStyles_()}
+            ${getPrintTemplateStyles_()}
+            ${getSharedStyles_()}
+            ${getPrintStyles_('Lesson Guide')}
+          </style>
+        </head>
+        <body class="print-mode">
+          <div class="print-doc">
+            ${htmlString}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const folderName = "Lesson Guide by Teacher MJ - PDF";
+    const folders = DriveApp.getFoldersByName(folderName);
+    const folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+
+    const blob = Utilities.newBlob(fullHtml, 'text/html', filename || 'lesson.pdf')
+                          .getAs('application/pdf');
+
+    const file = folder.createFile(blob);
+
+    return {
+      success: true,
+      folderUrl: folder.getUrl(),
+      fileUrl: file.getUrl()
+    };
+  } catch (e) {
+    throw new Error("Drive Save Error: " + e.message);
+  }
+}

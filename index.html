@@ -1,9 +1,9 @@
-
 <!DOCTYPE html>
 
 <html>
 
 <head>
+
 
   <base target="_top">
 
@@ -14,67 +14,74 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 
   <style>
-  
-#scrollToTopBtn {
-  position: fixed;
-  bottom: 30px;
-  right: 30px; /* Default for Desktop */
-  z-index: 10001 !important; /* Higher than the menu */
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: var(--template-accent, #0052cc);
-  color: white;
-  border: none;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
+    #scrollToTopBtn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      /* Default for Desktop */
+      z-index: 10001 !important;
+      /* Higher than the menu */
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--template-accent, #0052cc);
+      color: white;
+      border: none;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
 
-/* --- THE MOBILE SPLIT --- */
-@media (max-width: 760px) {
-  #scrollToTopBtn {
-    right: auto; /* Cancel the right positioning */
-    left: 25px;  /* Move to the bottom-left */
-    bottom: 25px;
-    width: 45px; /* Slightly smaller for mobile */
-    height: 45px;
-  }
-  
-  /* Ensure the Hamburger stays on the right */
-  .mobile-fab {
-    right: 25px !important;
-    left: auto !important;
-  }
-}
+    /* --- THE MOBILE SPLIT --- */
+    @media (max-width: 760px) {
+      #scrollToTopBtn {
+        right: auto;
+        /* Cancel the right positioning */
+        left: 25px;
+        /* Move to the bottom-left */
+        bottom: 25px;
+        width: 45px;
+        /* Slightly smaller for mobile */
+        height: 45px;
+      }
 
-.scroll-btn-hide {
-  opacity: 0;
-  visibility: hidden;
-  transform: scale(0.5);
-}
+      /* Ensure the Hamburger stays on the right */
+      .mobile-fab {
+        right: 25px !important;
+        left: auto !important;
+      }
+    }
 
-.scroll-btn-show {
-  opacity: 1;
-  visibility: visible;
-  transform: scale(1);
-}
+    .scroll-btn-hide {
+      opacity: 0;
+      visibility: hidden;
+      transform: scale(0.5);
+    }
+
+    .scroll-btn-show {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1);
+    }
 
     /* Ensure variables are available to the toolbar */
-.preview-shell {
-  --template-accent: #0052cc;
-  --template-soft-bg: #f5f9ff;
-  --template-soft-border: #d9e6ff;
-}
+    .preview-shell {
+      --template-accent: #0052cc;
+      --template-soft-bg: #f5f9ff;
+      --template-soft-border: #d9e6ff;
+    }
 
-#outputView {
-  padding-top: 10px; /* Gives the content a little breathing room below the solid toolbar */
-}
+    #outputView {
+      padding-top: 10px;
+      /* Gives the content a little breathing room below the solid toolbar */
+    }
 
     * {
 
@@ -190,16 +197,18 @@
 
     }
 
-.grid {
+    .grid {
       display: grid;
-      grid-template-columns: 420px 1fr; /* The standard 2-column view */
+      grid-template-columns: 420px 1fr;
+      /* The standard 2-column view */
       gap: 20px;
       margin-top: 20px;
       align-items: start;
-      transition: grid-template-columns 0.4s ease; /* Smooth transition */
+      transition: grid-template-columns 0.4s ease;
+      /* Smooth transition */
     }
 
-/* Shared visual styles for both containers */
+    /* Shared visual styles for both containers */
     .panel,
     .preview-shell {
       background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
@@ -207,31 +216,38 @@
       border-radius: 24px;
       padding: 22px;
       box-shadow: 0 10px 28px rgba(15, 39, 71, 0.06);
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); /* Smooth slide/fade */
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      /* Smooth slide/fade */
     }
 
     /* SPECIFIC DEDICATED STYLES FOR THE SIDEBAR (PANEL) */
     .panel {
       position: sticky;
-      top: 20px; /* Gap from the top of the screen */
-      max-height: calc(100vh - 40px); /* Ensures it never goes off-bottom */
-      overflow-y: auto; /* Internal scrollbar if settings are too long */
-      scrollbar-width: thin; /* Firefox */
-      scrollbar-color: #d7dfeb transparent; /* Firefox */
+      top: 20px;
+      /* Gap from the top of the screen */
+      max-height: calc(100vh - 40px);
+      /* Ensures it never goes off-bottom */
+      overflow-y: auto;
+      /* Internal scrollbar if settings are too long */
+      scrollbar-width: thin;
+      /* Firefox */
+      scrollbar-color: #d7dfeb transparent;
+      /* Firefox */
     }
 
     /* Modern slim scrollbar for Chrome/Safari */
     .panel::-webkit-scrollbar {
       width: 5px;
     }
+
     .panel::-webkit-scrollbar-thumb {
       background: #d7dfeb;
       border-radius: 10px;
     }
 
     /* Collapsed state for Focus Mode */
-.panel.collapsed {
-      margin-left: -440px; 
+    .panel.collapsed {
+      margin-left: -440px;
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
@@ -269,11 +285,12 @@
       color: var(--muted);
       font-weight: 800;
     }
-    
-/* FIXES THE GAP: When this class is added, the 420px column disappears */
+
+    /* FIXES THE GAP: When this class is added, the 420px column disappears */
     .grid.full-width {
-      grid-template-columns: 0fr 1fr !important; 
-      gap: 0; /* Removes the 20px space between the hidden sidebar and content */
+      grid-template-columns: 0fr 1fr !important;
+      gap: 0;
+      /* Removes the 20px space between the hidden sidebar and content */
     }
 
     .preview-shell {
@@ -284,26 +301,27 @@
 
     }
 
-.preview-toolbar {
+    .preview-toolbar {
       position: sticky;
-      top: 0; /* Flush to the top - no more "walking under the bridge" */
+      top: 0;
+      /* Flush to the top - no more "walking under the bridge" */
       z-index: 1000;
       display: flex;
       flex-direction: column;
       gap: 14px;
-      
+
       /* Remove the top margin so there's no gap above the toolbar */
-      margin: 0 -22px 16px -22px; 
+      margin: 0 -22px 16px -22px;
       /* The negative margins (-22px) pull it to the very edges of the preview-shell */
-      
+
       padding: 16px 22px;
       background: #ffffff !important;
       border-bottom: 1px solid #e8edf6;
-      border-top: 6px solid var(--template-accent, #0052cc); 
-      
+      border-top: 6px solid var(--template-accent, #0052cc);
+
       /* Square top corners, rounded bottom corners */
-      border-radius: 0 0 24px 24px; 
-      
+      border-radius: 0 0 24px 24px;
+
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
       box-shadow: 0 10px 15px -5px rgba(15, 39, 71, 0.1);
@@ -347,7 +365,7 @@
       font-weight: 600;
       transition: filter 0.2s ease;
     }
-    
+
     #toggleSidebarBtn:hover {
       filter: brightness(0.95);
       background: var(--template-soft-bg, #f0f7ff);
@@ -820,55 +838,66 @@
 
     }
 
-/* --- 1. DESKTOP SAFETY DEFAULTS --- */
+    /* --- 1. DESKTOP SAFETY DEFAULTS --- */
     /* These ensure mobile-only elements stay hidden on Laptops/Desktops */
-    .mobile-back-btn, .mobile-fab, .action-sheet-overlay {
+    .mobile-back-btn,
+    .mobile-fab,
+    .action-sheet-overlay {
       display: none;
     }
 
     /* --- 2. TABLET OPTIMIZATION (1080px and down) --- */
     @media (max-width: 1080px) {
-      .grid { 
-        grid-template-columns: 1fr !important; 
+      .grid {
+        grid-template-columns: 1fr !important;
       }
-      .panel { 
-        position: relative !important; 
-        top: 0 !important; 
-        max-height: none !important; 
+
+      .panel {
+        position: relative !important;
+        top: 0 !important;
+        max-height: none !important;
         width: 100% !important;
       }
     }
 
     /* --- 3. MOBILE STATE-BASED OPTIMIZATION (760px and down) --- */
     @media (max-width: 760px) {
-      .hero { display: none !important; }
-      .shell { margin: 0; padding: 10px; }
-      
+      .hero {
+        display: none !important;
+      }
+
+      .shell {
+        margin: 0;
+        padding: 10px;
+      }
+
       /* Force the grid to act like a vertical stack */
-      .grid { 
-        display: block !important; 
-        margin-top: 0; 
+      .grid {
+        display: block !important;
+        margin-top: 0;
       }
 
       /* Initial State: Setup panel fills screen, Preview is hidden */
-      .panel { 
-        width: 100% !important; 
-        margin-bottom: 20px; 
-        border-radius: 16px; 
-        display: block; /* Visible by default on load */
+      .panel {
+        width: 100% !important;
+        margin-bottom: 20px;
+        border-radius: 16px;
+        display: block;
+        /* Visible by default on load */
       }
-      
-      .preview-shell { 
-        display: none; /* Hidden by default on load until 'Generate' is clicked */
-        width: 100% !important; 
-        border-radius: 16px; 
-        padding: 10px; 
-        border: none; 
+
+      .preview-shell {
+        display: none;
+        /* Hidden by default on load until 'Generate' is clicked */
+        width: 100% !important;
+        border-radius: 16px;
+        padding: 10px;
+        border: none;
       }
 
       /* THE BACK BUTTON: Only visible on Mobile Preview */
       .mobile-back-btn {
-        display: block !important; 
+        display: block !important;
         width: 100%;
         margin-bottom: 15px;
         padding: 14px;
@@ -883,102 +912,146 @@
       }
 
       /* Hide the desktop toolbar to save half the screen */
-      .preview-toolbar { display: none !important; }
+      .preview-toolbar {
+        display: none !important;
+      }
 
       /* MOBILE ACTION SHEET (The Pop-up Menu) */
       .action-sheet-overlay {
         position: fixed;
-        top: 0; left: 0; 
-        width: 100%; height: 100%;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
         background: rgba(15, 39, 71, 0.7);
         z-index: 9999;
-        display: none; /* Controlled via JS openMobileMenu() */
+        display: none;
+        /* Controlled via JS openMobileMenu() */
         align-items: flex-end;
       }
-      
+
       .action-sheet-content {
-        background: white; 
-        width: 100%; 
+        background: white;
+        width: 100%;
         padding: 24px;
         border-radius: 24px 24px 0 0;
-        display: flex; 
-        flex-direction: column; 
+        display: flex;
+        flex-direction: column;
         gap: 12px;
         animation: slideUp 0.3s ease-out;
       }
 
       @keyframes slideUp {
-        from { transform: translateY(100%); }
-        to { transform: translateY(0); }
+        from {
+          transform: translateY(100%);
+        }
+
+        to {
+          transform: translateY(0);
+        }
       }
 
-      .sheet-title { 
-        font-weight: 800; 
-        color: var(--brand-dark); 
-        font-size: 18px; 
-        margin-bottom: 5px; 
+      .sheet-title {
+        font-weight: 800;
+        color: var(--brand-dark);
+        font-size: 18px;
+        margin-bottom: 5px;
       }
 
       /* Floating Action Button (The ☰ button) */
-.mobile-fab {
-    display: none; /* JavaScript will change this to 'flex' */
-    position: fixed; 
-    bottom: 25px; 
-    right: 25px;
-    background: var(--template-accent, #0052cc) !important; /* Force the color */
-    color: white !important;
-    width: 60px; 
-    height: 60px;
-    border-radius: 50%; 
-    align-items: center; 
-    justify-content: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
-    z-index: 9999 !important; /* Ensure it's on top of everything */
-    border: none; 
-    font-size: 24px;
-  }
+      .mobile-fab {
+        display: none;
+        /* JavaScript will change this to 'flex' */
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        background: var(--template-accent, #0052cc) !important;
+        /* Force the color */
+        color: white !important;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        z-index: 9999 !important;
+        /* Ensure it's on top of everything */
+        border: none;
+        font-size: 24px;
+      }
 
       /* Prevent math from stretching mobile screen */
-      .katex-display { 
-        font-size: 0.85em; 
-        overflow-x: auto; 
-        padding-bottom: 5px; 
+      .katex-display {
+        font-size: 0.85em;
+        overflow-x: auto;
+        padding-bottom: 5px;
       }
     }
 
-    <?!= getLessonStyles_() ?>
+    <?!=getLessonStyles_() ?>
 
     /* Guided Notes Specific Styles */
-.cloze-blank {
-  display: inline-block;
-  min-width: 100px;
-  border-bottom: 1px solid #000;
-  margin: 0 4px;
-  padding: 0 5px;
-}
+    .cloze-blank {
+      display: inline-block;
+      min-width: 100px;
+      border-bottom: 1px solid #000;
+      margin: 0 4px;
+      padding: 0 5px;
+    }
 
-.criteria-list {
-  list-style-type: none;
-  padding-left: 0;
-}
+    .criteria-list {
+      list-style-type: none;
+      padding-left: 0;
+    }
 
-.criteria-list li::before {
-  content: "□"; /* Checkbox style for students */
-  margin-right: 10px;
-  font-weight: bold;
-}
+    /* Add this new flex rule to force them side-by-side */
+    .criteria-list li {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      /* Adds a little breathing room between items */
+    }
 
-.centered-caps {
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
+    .criteria-list li::before {
+      content: "□";
+      /* Checkbox style for students */
+      margin-right: 10px;
+      font-weight: bold;
+    }
+
+    .centered-caps {
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Success Animation for the Open Folder Button */
+    @keyframes pulse-green {
+      0% {
+        box-shadow: 0 0 0 0 rgba(12, 107, 47, 0.4);
+      }
+
+      70% {
+        box-shadow: 0 0 0 10px rgba(12, 107, 47, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(12, 107, 47, 0);
+      }
+    }
+
+    .pulse-success {
+      animation: pulse-green 1.5s 3;
+      /* Pulses 3 times then stops */
+      border: 2px solid #0c6b2f !important;
+      transform: scale(1.05);
+    }
   </style>
 
 </head>
 
 <body>
- 
+
 
   <div class="shell">
 
@@ -988,7 +1061,9 @@
 
         <h1>LESSON GUIDE BUILDER</h1>
 
-        <p>Developed by Teacher MJ © <?!= getCurrentYear_() ?></p>
+        <p>Developed by Teacher MJ ©
+          <?!= getCurrentYear_() ?>
+        </p>
 
       </div>
 
@@ -1000,180 +1075,106 @@
 
         <h2>Lesson Setup</h2>
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-  <button class="btn btn-primary" style="flex:1" onclick="showView('setup')">New Lesson</button>
-  <button class="btn btn-neutral" style="flex:1" onclick="loadHistory()">History</button>
-</div>
-
-<div id="setupView">
-   </div>
-
-<div id="historyView" style="display:none;">
-   <div id="historyList">Loading history...</div>
-</div>
-
-        <div class="panel-section">
-
-          <div class="section-heading">Core Details</div>
-
-          <div class="field">
-
-            <label for="subject">Subject</label>
-
-            <input id="subject" type="text" placeholder="e.g. Mathematics, Science, Filipino">
-
-          </div>
-
-          <div class="field">
-
-            <label for="gradeLevel">Grade Level</label>
-
-            <input id="gradeLevel" type="text" placeholder="e.g. Grade 6">
-
-          </div>
-
-          <div class="field">
-
-            <label for="topic">Topic</label>
-
-            <input id="topic" type="text" placeholder="e.g. Distance, Speed, and Time">
-
-          </div>
-
-          <div class="field">
-
-            <label for="objective">Objective / Competency</label>
-
-            <textarea id="objective" placeholder="e.g. Solves routine and non-routine problems involving speed, distance, and time."></textarea>
-
-          </div>
-
+          <button class="btn btn-primary" style="flex:1" onclick="showView('setup')">New Lesson</button>
+          <button class="btn btn-neutral" style="flex:1" onclick="loadHistory()">History</button>
         </div>
 
-        <div class="panel-section">
+        <div id="historyView" style="display:none;">
+          <div id="historyList">Loading history...</div>
+        </div>
 
-          <div class="section-heading">Instruction Design</div>
+        <div id="setupView">
 
-          <div class="field">
-
-            <label for="templateType">Lesson Template</label>
-
-            <select id="templateType">
-
-              <option value="CONCEPT" selected>Concept Lesson</option>
-
-              <option value="GUIDED_PRACTICE">Guided Practice</option>
-
-              <option value="REVIEW">Review Sheet</option>
-
-              <option value="QUIZ">Quiz Style</option>
-
-              <option value="REMEDIATION">Remediation</option>
-
-              <option value="ENRICHMENT">Enrichment</option>
-              <option value="GUIDED_NOTES">Guided Notes</option>
-
-            </select>
-
-          </div>
-
-          <div class="field">
-
-            <label for="difficulty">Difficulty</label>
-
-            <select id="difficulty">
-
-              <option value="BELOW_LEVEL">Below Level</option>
-
-              <option value="ON_LEVEL" selected>On Level</option>
-
-              <option value="ABOVE_LEVEL">Above Level</option>
-
-            </select>
-
-          </div>
-
-          <div class="field">
-
-            <label for="itemCount">Number of Practice Items</label>
-
-            <input id="itemCount" type="number" min="5" max="20" value="10">
-
-            <div class="help-note">Choose from 5 to 20 items.</div>
-
-          </div>
-
-          <div class="field">
-
-            <label>Instructional Add-ons</label>
-
-            <div class="checkbox-grid">
-
-              <label class="check"><input id="includeSuccessCriteria" type="checkbox" checked> Include success criteria</label>
-
-              <label class="check"><input id="includeVocabulary" type="checkbox" checked> Include vocabulary</label>
-
-              <label class="check"><input id="includeMisconceptions" type="checkbox" checked> Include misconceptions</label>
-
-              <label class="check"><input id="includeRealWorld" type="checkbox" checked> Use real-world context</label>
-
+          <div class="panel-section">
+            <div class="section-heading">Core Details</div>
+            <div class="field">
+              <label for="subject">Subject</label>
+              <input id="subject" type="text" placeholder="e.g. Mathematics, Science, Filipino">
             </div>
-
+            <div class="field">
+              <label for="gradeLevel">Grade Level</label>
+              <input id="gradeLevel" type="text" placeholder="e.g. Grade 6">
+            </div>
+            <div class="field">
+              <label for="topic">Topic</label>
+              <input id="topic" type="text" placeholder="e.g. Distance, Speed, and Time">
+            </div>
+            <div class="field">
+              <label for="objective">Objective / Competency</label>
+              <textarea id="objective" placeholder="e.g. Solves routine and non-routine problems involving speed, distance, and time."></textarea>
+            </div>
           </div>
+
+          <div class="panel-section">
+            <div class="section-heading">Instruction Design</div>
+            <div class="field">
+              <label for="templateType">Lesson Template</label>
+              <select id="templateType">
+                <option value="CONCEPT" selected>Concept Lesson</option>
+                <option value="GUIDED_PRACTICE">Guided Practice</option>
+                <option value="REVIEW">Review Sheet</option>
+                <option value="QUIZ">Quiz Style</option>
+                <option value="REMEDIATION">Remediation</option>
+                <option value="ENRICHMENT">Enrichment</option>
+                <option value="GUIDED_NOTES">Guided Notes</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="difficulty">Difficulty</label>
+              <select id="difficulty">
+                <option value="BELOW_LEVEL">Below Level</option>
+                <option value="ON_LEVEL" selected>On Level</option>
+                <option value="ABOVE_LEVEL">Above Level</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="itemCount">Number of Practice Items</label>
+              <input id="itemCount" type="number" min="5" max="20" value="10">
+              <div class="help-note">Choose from 5 to 20 items.</div>
+            </div>
+            <div class="field">
+              <label>Instructional Add-ons</label>
+              <div class="checkbox-grid">
+                <label class="check"><input id="includeSuccessCriteria" type="checkbox" checked> Include success criteria</label>
+                <label class="check"><input id="includeVocabulary" type="checkbox" checked> Include vocabulary</label>
+                <label class="check"><input id="includeMisconceptions" type="checkbox" checked> Include misconceptions</label>
+                <label class="check"><input id="includeRealWorld" type="checkbox" checked> Use real-world context</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <div class="section-heading">Header and Footer</div>
+            <div class="field">
+              <label for="schoolName">School Name</label>
+              <input id="schoolName" type="text" placeholder="Optional school name">
+            </div>
+            <div class="field">
+              <label for="teacherName">Teacher Name</label>
+              <input id="teacherName" type="text" placeholder="Optional teacher name">
+            </div>
+            <div class="field">
+              <label for="quarter">Quarter / Grading Period</label>
+              <input id="quarter" type="text" placeholder="e.g. Quarter 2">
+            </div>
+            <div class="field">
+              <label for="customHeader">Custom Header Line</label>
+              <input id="customHeader" type="text" placeholder="Optional subtitle or department line">
+            </div>
+          </div>
+
+          <div class="actions input-actions">
+            <button id="generateBtn" class="btn btn-primary" onclick="buildLesson()">Generate Lesson</button>
+            <button class="btn btn-neutral" onclick="resetForm()">Reset</button>
+          </div>
+
+          <div id="status" class="status"></div>
 
         </div>
-
-        <div class="panel-section">
-
-          <div class="section-heading">Header and Footer</div>
-
-          <div class="field">
-
-            <label for="schoolName">School Name</label>
-
-            <input id="schoolName" type="text" placeholder="Optional school name">
-
-          </div>
-
-          <div class="field">
-
-            <label for="teacherName">Teacher Name</label>
-
-            <input id="teacherName" type="text" placeholder="Optional teacher name">
-
-          </div>
-
-          <div class="field">
-
-            <label for="quarter">Quarter / Grading Period</label>
-
-            <input id="quarter" type="text" placeholder="e.g. Quarter 2">
-
-          </div>
-
-          <div class="field">
-
-            <label for="customHeader">Custom Header Line</label>
-
-            <input id="customHeader" type="text" placeholder="Optional subtitle or department line">
-
-          </div>
-
-        </div>
-
-        <div class="actions input-actions">
-
-          <button id="generateBtn" class="btn btn-primary" onclick="buildLesson()">Generate Lesson</button>
-
-          <button class="btn btn-neutral" onclick="resetForm()">Reset</button>
-
-        </div>
-
-        <div id="status" class="status"></div>
-
       </div>
 
       <div class="preview-shell">
-<button class="mobile-back-btn" onclick="backToSetup()">
+        <button class="mobile-back-btn" onclick="backToSetup()">
    ← Edit Lesson Setup
 </button>
 
@@ -1185,16 +1186,17 @@
 
               <div class="preview-title">Preview & Export</div>
 
-              <div class="help-note">Adjust the view, edit the generated lesson, reveal answers, and export student or teacher copies.</div>
+              <div class="help-note">Adjust the view, edit the generated lesson, reveal answers, and export student or
+                teacher copies.</div>
 
             </div>
 
-<div class="toolbar-group">
-  <button id="toggleSidebarBtn" class="btn btn-neutral" onclick="toggleSidebar()">
+            <div class="toolbar-group">
+              <button id="toggleSidebarBtn" class="btn btn-neutral" onclick="toggleSidebar()">
     <span id="toggleIcon">◂</span> <span id="toggleText">Hide Setup</span>
   </button>
-  <span class="mini-badge" id="modeBadge">Student Copy</span>
-</div>
+              <span class="mini-badge" id="modeBadge">Student Copy</span>
+            </div>
 
           </div>
 
@@ -1244,6 +1246,7 @@
 
               <button id="printTeacherBtn" class="btn btn-alt" onclick="printLesson('TEACHER')" disabled>Export Teacher PDF</button>
               <button id="saveDriveBtn" class="btn btn-alt" onclick="saveToDrive()" disabled>Save to Drive</button>
+              <button id="openFolderBtn" class="btn btn-neutral" onclick="openDriveFolder()" disabled>Open Folder</button>
 
             </div>
 
@@ -1274,6 +1277,8 @@
     let currentRequest = null;
     let editMode = false;
     let hasManualEdits = false;
+
+
 
 function reopenLesson(jsonString) {
   try {
@@ -1323,7 +1328,7 @@ function loadHistory() {
       if (!history || history.length === 0) {
         list.innerHTML = `
           <div class="empty-state-minimal">
-            <div class="empty-icon-minimal">📚</div>
+            <div class="empty-icon-minimal">🗃️</div>
             <p>Your library is empty. Generate a lesson to see it here!</p>
           </div>`;
         return;
@@ -1344,7 +1349,7 @@ function loadHistory() {
             </div>
             <div style="display:flex; gap:8px;">
               <button class="btn btn-primary" style="flex:1; min-height:36px; font-size:12px;" 
-                onclick="reopenFromHistory(window.historyItem_${index})">
+                onclick="reopenLesson(window['historyItem_${index}'])">
                 Re-open Preview
               </button>
             </div>
@@ -1358,29 +1363,114 @@ function loadHistory() {
     .getUserHistory();
 }
 
-function saveToDrive() {
-  if (!currentLesson) return;
-  
-  const btn = document.getElementById('saveDriveBtn');
-  btn.disabled = true;
-  btn.textContent = "Saving...";
-  
-  const payload = {
-    html: document.getElementById('outputView').innerHTML,
-    filename: currentLesson.title + ".html"
-  };
+let lastFolderUrl = ""; // Ensure this global variable exists at the top of your script
 
+function saveToDrive() {
+  if (!currentLesson) {
+    setStatus("❌ Please generate a lesson first before saving.", "error");
+    return;
+  }
+  
+  const saveBtn = document.getElementById('saveDriveBtn');
+  const openBtn = document.getElementById('openFolderBtn');
+  
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Processing PDF...";
+  setStatus("Rendering math and formatting...", "");
+
+  const requestData = getFormData();
+  const copyMode = document.getElementById('previewMode').value;
+
+  // 1. Ask the server for the raw print HTML
   google.script.run
     .withSuccessHandler(function(res) {
-      btn.disabled = false;
-      btn.textContent = "Save to Drive";
-      setStatus(`Saved to Drive! <a href="${res.url}" target="_blank">Open Doc</a>`, "success");
+      
+      // 2. Create a hidden "staging area" in the browser
+      const stage = document.createElement('div');
+      stage.style.display = 'none';
+      stage.innerHTML = res.html;
+      document.body.appendChild(stage);
+
+      // 3. Force KaTeX to render all the math inside this hidden area!
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(stage, {
+          delimiters: [
+            { left: '\\[', right: '\\]', display: true },
+            { left: '\\(', right: '\\)', display: false }
+          ],
+          throwOnError: false
+        });
+      }
+
+      // 4. Extract the beautifully rendered HTML and clean up the stage
+      const fullyRenderedHtml = stage.innerHTML;
+      document.body.removeChild(stage); 
+
+      setStatus("Saving rendered PDF to Drive...", "");
+
+      // 5. Send THIS final baked string to the server to be converted to PDF
+      google.script.run
+        .withSuccessHandler(function(saveRes) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save to Drive";
+          try { showSuccessCelebration(); } catch(e) {}
+          
+          lastFolderUrl = saveRes.folderUrl;
+          openBtn.disabled = false;
+          openBtn.classList.add('pulse-success');
+          
+          setStatus("🎉 Saved perfectly to Drive!", "success");
+          setTimeout(() => { openBtn.classList.remove('pulse-success'); }, 4000);
+        })
+        .withFailureHandler(function(err) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save to Drive";
+          setStatus("Save Error: " + err.message, "error");
+        })
+        .createPdfFromHtml(fullyRenderedHtml, res.filename); // Calls the NEW server function!
     })
     .withFailureHandler(function(err) {
-      btn.disabled = false;
-      setStatus(err.message, "error");
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save to Drive";
+      setStatus("Prepare Error: " + err.message, "error");
     })
-    .saveLessonToDrive(payload);
+    .getPrintableLessonHtml({
+      lesson: currentLesson,
+      request: requestData,
+      copyMode: copyMode
+    });
+}
+function printLesson(copyMode) {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      const win = window.open('', '_blank');
+      win.document.write(res.html);
+      win.document.close();
+    })
+    .getPrintableLessonHtml({
+      lesson: currentLesson,
+      request: getFormData(),
+      copyMode: copyMode
+    });
+}
+
+/**
+ * Opens the specific Google Drive folder in a new tab
+ */
+function openDriveFolder() {
+  if (lastFolderUrl) {
+    window.open(lastFolderUrl, '_blank');
+  } else {
+    setStatus("Please save a file first to locate the folder.", "warn");
+  }
+}
+
+function openDriveFolder() {
+  if (lastFolderUrl) {
+    window.open(lastFolderUrl, '_blank');
+  } else {
+    setStatus("Please save a file first to locate the folder.", "warn");
+  }
 }
 
     // --- CORE INITIALIZATION ---
@@ -1740,32 +1830,60 @@ function checkAnswer(index) {
     function exportStudentPDF() { printLesson('STUDENT'); closeMobileMenu(); }
     function exportTeacherPDF() { printLesson('TEACHER'); closeMobileMenu(); }
 
+
+function showSuccessCelebration() {
+  const emoji = document.createElement('div');
+  emoji.textContent = '🎉';
+  emoji.style.position = 'fixed';
+  emoji.style.left = '50%';
+  emoji.style.top = '50%';
+  emoji.style.transform = 'translate(-50%, -50%)';
+  emoji.style.fontSize = '80px';
+  emoji.style.zIndex = '10000';
+  emoji.style.pointerEvents = 'none';
+  emoji.style.transition = 'all 1.5s ease-out';
+  
+  document.body.appendChild(emoji);
+
+  // Animate it floating up and fading out
+  setTimeout(() => {
+    emoji.style.top = '30%';
+    emoji.style.opacity = '0';
+    emoji.style.transform = 'translate(-50%, -50%) scale(1.5)';
+  }, 50);
+
+  // Clean it up so it doesn't clutter the DOM
+  setTimeout(() => {
+    emoji.remove();
+  }, 1600);
+}
+
   </script>
 
-<button id="scrollToTopBtn" class="btn btn-secondary-strong scroll-btn-hide" onclick="scrollToTop()" title="Scroll to Top">
+  <button id="scrollToTopBtn" class="btn btn-secondary-strong scroll-btn-hide" onclick="scrollToTop()" title="Scroll to Top">
   ↑
 </button>
 
-<button id="mobileOptionsBtn" class="mobile-fab" onclick="openMobileMenu()">
+  <button id="mobileOptionsBtn" class="mobile-fab" onclick="openMobileMenu()">
   ☰
 </button>
 
-<div id="mobileActionSheet" class="action-sheet-overlay" onclick="closeMobileMenu()">
-  <div class="action-sheet-content" onclick="event.stopPropagation()">
-    <div class="sheet-title">Lesson Options</div>
-    
-    <button class="btn btn-neutral" onclick="toggleDensity()">Toggle Compact View</button>
-    <button class="btn btn-neutral" onclick="toggleAnswers()">Show/Hide Answers</button>
-    <button class="btn btn-neutral" onclick="enterEditMode()">Edit Content</button>
-    
-    <hr style="border:0; border-top:1px solid #eee; margin:5px 0;">
-    
-    <button class="btn btn-primary" onclick="exportStudentPDF()">Export Student PDF</button>
-    <button class="btn btn-primary" onclick="exportTeacherPDF()">Export Teacher PDF</button>
-    
-    <button class="btn btn-secondary" style="margin-top:10px;" onclick="closeMobileMenu()">Close</button>
+  <div id="mobileActionSheet" class="action-sheet-overlay" onclick="closeMobileMenu()">
+    <div class="action-sheet-content" onclick="event.stopPropagation()">
+      <div class="sheet-title">Lesson Options</div>
+
+      <button class="btn btn-neutral" onclick="toggleDensity()">Toggle Compact View</button>
+      <button class="btn btn-neutral" onclick="toggleAnswers()">Show/Hide Answers</button>
+      <button class="btn btn-neutral" onclick="enterEditMode()">Edit Content</button>
+
+      <hr style="border:0; border-top:1px solid #eee; margin:5px 0;">
+
+      <button class="btn btn-primary" onclick="exportStudentPDF()">Export Student PDF</button>
+      <button class="btn btn-primary" onclick="exportTeacherPDF()">Export Teacher PDF</button>
+
+      <button class="btn btn-secondary" style="margin-top:10px;" onclick="closeMobileMenu()">Close</button>
+    </div>
   </div>
-</div>
 
 </body>
 
