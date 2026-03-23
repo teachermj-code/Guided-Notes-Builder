@@ -25,7 +25,8 @@ const TEMPLATE_TYPES = Object.freeze([
   'REVIEW',
   'QUIZ',
   'REMEDIATION',
-  'ENRICHMENT'
+  'ENRICHMENT',
+  'GUIDED_NOTES'
 ]);
 const DIFFICULTY_LEVELS = Object.freeze([
   'BELOW_LEVEL',
@@ -458,6 +459,10 @@ function buildPrompt_(request) {
     '- Ensure every field is classroom-ready, specific, and useful.',
     '- Create EXACTLY ' + request.itemCount + ' practice items. Do not skip any.',
     '',
+    'Template Specific Rule (GUIDED_NOTES):',
+    '- If Template Type is GUIDED_NOTES, successCriteria MUST start with "I can...".',
+    '- If Template Type is GUIDED_NOTES, lessonSummary MUST be exactly 3 direct sentences summarizing the lesson (no introductory "In this lesson..." phrases).',
+    '',
     'Key concept rules:',
     '- Each key concept must include: heading, summary, formula, symbolMeaning, workedExample, misconception.',
     '- For non-math topics, formula may be an empty string only if no formula is appropriate.',
@@ -631,6 +636,17 @@ function getTemplateGuidance_(templateType) {
         '- Later items should involve transfer to new or less familiar situations.',
         '- Increase the thinking demand, not just the size of the numbers.'
       ].join('\n');
+      case 'GUIDED_NOTES':
+      return [
+        '- Purpose: Create a fill-in-the-blanks style note-taking guide.',
+        '- Tone: Instructional and organized.',
+        '- Objective: Rewrite the objective as at least 3 "I can..." statements.',
+        '- Key Concepts: Provide core definitions and rules.',
+        '- Solved Examples: Provide fully worked out solutions.',
+        '- Guided Practice: Provide problems with partial steps shown.',
+        '- Individual Practice: Provide problems for the student to solve alone.',
+        '- Wrap Up: A 2-3 sentence summary that concludes the lesson.'
+      ].join('\n');
     default:
       return [
         '- Purpose: create a full concept lesson for classroom instruction.',
@@ -690,6 +706,12 @@ function getTemplateFieldBehavior_(templateType) {
         '- Practice items must become more demanding as they progress.',
         '- At least half of the practice items should require multi-step reasoning, comparison, pattern recognition, or real-world transfer.',
         '- The later items should feel more challenging than standard on-level practice.'
+      ].join('\n');
+      case 'GUIDED_NOTES':
+      return [
+        '- successCriteria: Start every item with "I can".',
+        '- lessonSummary: Write exactly 3 sentences. No more, no less. Make them direct concluding statements.',
+        '- keyConcepts: Ensure summaries are descriptive enough to contain vocabulary terms for the fill-in-the-blanks feature.'
       ].join('\n');
     default:
       return [
@@ -1269,7 +1291,8 @@ function renderTemplateBody_(lesson, options) {
     REVIEW: renderReviewTemplate_,
     QUIZ: renderQuizTemplate_,
     REMEDIATION: renderRemediationTemplate_,
-    ENRICHMENT: renderEnrichmentTemplate_
+    ENRICHMENT: renderEnrichmentTemplate_,
+    GUIDED_NOTES: renderGuidedNotesTemplate_
   };
   return (renderers[templateType] || renderConceptTemplate_)(lesson, teacherView, forPrint);
 }
@@ -2915,6 +2938,72 @@ function writeToLog_(status, details, request = null) {
   } catch (e) {
     console.error("Logging failed: " + e.toString());
   }
+}
+
+function renderGuidedNotesTemplate_(lesson, teacherView, forPrint) {
+  const practiceItems = lesson.practiceItems || [];
+  const splitIndex = Math.ceil(practiceItems.length / 2);
+  
+  // Custom "I Can" formatter
+  const objectivesHtml = (lesson.successCriteria && lesson.successCriteria.length) 
+    ? lesson.successCriteria.map(sc => `<li>I can ${sc.replace(/^I can\s+/i, '')}</li>`).join('')
+    : `<li>I can explain the core concepts of ${escapeHtml_(lesson.topic)}</li>`;
+
+  // Map Key Concepts and Solved Examples from the AI's generated keyConcepts array
+  const conceptsHtml = lesson.keyConcepts.map(item => 
+    `<div class="sub-card"><strong>${escapeHtml_(item.heading)}:</strong> ${createBlanks_(item.summary, lesson.vocabulary)}</div>`
+  ).join('');
+
+  const solvedExamplesHtml = lesson.keyConcepts.map(item => 
+    `<div class="example-box"><strong>Example: ${escapeHtml_(item.heading)}</strong><br>${item.workedExample}</div>`
+  ).join('');
+
+  return [
+    // 1. Title (Centered CAPS)
+    `<section style="text-align:center;"><h2 style="text-transform:uppercase; font-weight:800;">${escapeHtml_(lesson.title)}</h2></section>`,
+    
+    // 2. Objectives (I can statements)
+    `<section><h2 class="section-title">Objectives</h2><div class="card"><ul class="criteria-list">${objectivesHtml}</ul></div></section>`,
+    
+    // 3. Key Concepts (Not all caps)
+    `<section><h2 class="section-title" style="text-transform:none;">Key Concepts</h2><div class="card">${conceptsHtml}</div></section>`,
+    
+    // 4. Solved Examples (Not all caps)
+    `<section><h2 class="section-title" style="text-transform:none;">Solved Examples</h2>${solvedExamplesHtml}</section>`,
+    
+    // 5. Guided Practice (First half of items)
+    renderPracticeGroupSection_(lesson, teacherView, forPrint, {
+      title: 'Guided Practice',
+      note: 'Complete these with your teacher.'
+    }, 0, splitIndex),
+    
+    // 6. Individual Practice (Second half of items)
+    renderPracticeGroupSection_(lesson, teacherView, forPrint, {
+      title: 'Individual Practice',
+      note: 'Show what you have learned.'
+    }, splitIndex, practiceItems.length),
+    
+    // 7. Wrap Up (Statement form summary)
+    `<section><h2 class="section-title">Wrap Up</h2><div class="card"><div class="section-note" style="font-style:normal;">${escapeHtml_(lesson.lessonSummary)}</div></div></section>`
+  ].join('');
+}
+
+/**
+ * Automatically creates blanks for vocabulary terms found in text
+ */
+function createBlanks_(text, vocabulary) {
+  if (!text || !vocabulary || vocabulary.length === 0) return text;
+  let processedText = text;
+  // Sort vocabulary by length (longest first) so we don't accidentally break words
+  const sortedVocab = [...vocabulary].sort((a, b) => b.term.length - a.term.length);
+  
+  sortedVocab.forEach(item => {
+    const term = item.term.trim();
+    if (term.length < 2) return;
+    const regex = new RegExp(`\\b${term}\\b`, 'gi');
+    processedText = processedText.replace(regex, `<span class="cloze-blank" style="display:inline-block; min-width:80px; border-bottom:1px solid #000;">&nbsp;</span>`);
+  });
+  return processedText;
 }
 
 

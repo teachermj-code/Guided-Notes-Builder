@@ -947,6 +947,32 @@
     }
 
     <?!= getLessonStyles_() ?>
+
+    /* Guided Notes Specific Styles */
+.cloze-blank {
+  display: inline-block;
+  min-width: 100px;
+  border-bottom: 1px solid #000;
+  margin: 0 4px;
+  padding: 0 5px;
+}
+
+.criteria-list {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.criteria-list li::before {
+  content: "□"; /* Checkbox style for students */
+  margin-right: 10px;
+  font-weight: bold;
+}
+
+.centered-caps {
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
   </style>
 
 </head>
@@ -1033,6 +1059,7 @@
               <option value="REMEDIATION">Remediation</option>
 
               <option value="ENRICHMENT">Enrichment</option>
+              <option value="GUIDED_NOTES">Guided Notes</option>
 
             </select>
 
