@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In</title>
+  <style>
+    :root {
+      --bg-1: #0f172a;
+      --bg-2: #1e293b;
+      --card: rgba(255, 255, 255, 0.10);
+      --card-border: rgba(255, 255, 255, 0.18);
+      --text: #e2e8f0;
+      --muted: rgba(226, 232, 240, 0.72);
+      --accent: #38bdf8;
+      --accent-2: #818cf8;
+      --danger: #ef4444;
+      --input-bg: rgba(15, 23, 42, 0.38);
+      --shadow: 0 18px 50px rgba(2, 6, 23, 0.38);
+      --radius: 24px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.2), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.22), transparent 32%),
+        linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 100%);
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 40px;
+      box-shadow: var(--shadow);
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .login-header h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .login-header p {
+      color: var(--muted);
+    }
+
+    .form-group {
+      margin-bottom: 22px;
+      position: relative;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    /* Standard Input Styling */
+    .input-wrapper input {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 14px;
+      padding: 18px 16px; /* Balanced padding */
+      color: var(--text);
+      font-size: 16px;
+      outline: none;
+      transition: all 0.25s ease;
+    }
+
+    /* The Placeholder Label Logic */
+    .input-wrapper label {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(226, 232, 240, 0.5);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      pointer-events: none;
+    }
+
+    /* HIDE the label completely when user clicks or types */
+    .input-wrapper input:focus + label,
+    .input-wrapper input:not(:placeholder-shown) + label {
+      opacity: 0;
+      transform: translateY(-50%) translateX(10px);
+    }
+
+    .input-wrapper input:focus {
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
+    }
+
+    .error-message {
+      display: none;
+      color: var(--danger);
+      font-size: 13px;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .btn {
+      width: 100%;
+      border: none;
+      border-radius: 14px;
+      padding: 16px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent) 100%);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(56, 189, 248, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-card">
+    <div class="login-header">
+      <h2>Welcome</h2>
+      <p>Please enter your email</p>
+    </div>
+
+    <form id="loginForm" novalidate>
+      <div class="form-group">
+        <div class="input-wrapper">
+          <input type="email" id="email" placeholder=" " required>
+          <label>Email Address</label>
+        </div>
+        <div class="error-message" id="loginError"></div>
+      </div>
+
+      <button type="submit" class="btn" id="loginBtn">Sign In</button>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginError = document.getElementById('loginError');
+    const emailInput = document.getElementById('email');
+    const APP_URL = "<?= ScriptApp.getService().getUrl() ?>";
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      
+      if (!email) return;
+
+      loginError.classList.remove('show');
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Verifying...';
+
+      google.script.run
+        .withSuccessHandler(function (result) {
+          if (result.success) {
+            localStorage.setItem('authToken', result.token);
+            window.top.location.href = APP_URL + '?page=app&token=' + encodeURIComponent(result.token);
+          } else {
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Sign In';
+            loginError.textContent = result.message;
+            loginError.classList.add('show');
+          }
+        })
+        .verifyEmail(email);
+    });
+  </script>
+</body>
+</html>
