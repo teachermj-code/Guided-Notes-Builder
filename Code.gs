@@ -5,6 +5,7 @@
 /***************************************
  * 1. CONFIG
  ***************************************/
+ // DriveApp.getFoldersByName("Force Auth");
 const APP_CONFIG = Object.freeze({
   title: 'Lesson Guide Builder by Teacher MJ',
   defaultModel: 'models/gemini-flash-latest',
@@ -25,7 +26,8 @@ const TEMPLATE_TYPES = Object.freeze([
   'REVIEW',
   'QUIZ',
   'REMEDIATION',
-  'ENRICHMENT'
+  'ENRICHMENT',
+  'GUIDED_NOTES'
 ]);
 const DIFFICULTY_LEVELS = Object.freeze([
   'BELOW_LEVEL',
@@ -265,7 +267,7 @@ function buildLessonGuide(formData) {
     // Status: SUCCESS
     // Details: "Lesson Generated Successfully"
     // Content: Passing the 'request' object for Column E
-    writeToLog_("SUCCESS", "Lesson Generated Successfully", request);
+    writeToLog_("SUCCESS", "Lesson Generated Successfully", request, lesson);
 
     return {
       ok: true,
@@ -366,70 +368,72 @@ function generateLessonJson_(request) {
   const schema = getLessonSchema_(request);
   const prompt = buildPrompt_(request);
   const url = buildGeminiUrl_(config.apiKey, config.model);
-  let lastError = 'Unknown generation error.';
-  let outputText = '';
+  let lastError = '';
+
   for (let attempt = 1; attempt <= 2; attempt++) {
     const payload = {
-      contents: [
-        {
-          parts: [
-            {
-              text:
-                prompt +
-                (attempt === 2
-                  ? '\n\nReturn JSON only. No markdown fences. No commentary. Every string must be properly quoted and escaped. Follow the schema exactly.'
-                  : '')
-            }
-          ]
-        }
-      ],
+      contents: [{
+        parts: [{
+          text: prompt + (attempt === 2 ? '\n\nIMPORTANT: Return valid JSON only. Ensure all fields are filled.' : '')
+        }]
+      }],
       generationConfig: {
         maxOutputTokens: 8192,
         responseMimeType: 'application/json',
         responseJsonSchema: schema
       }
     };
+
     const response = UrlFetchApp.fetch(url, {
       method: 'post',
       contentType: 'application/json',
       payload: JSON.stringify(payload),
       muteHttpExceptions: true
     });
+
     const status = response.getResponseCode();
     const text = response.getContentText();
+
+    // 1. Handle API/Network Errors
     if (status !== 200) {
-      lastError = extractApiError_(text) || ('Gemini API request failed with status ' + status + '.');
+      lastError = "The AI service is temporarily unavailable (Status " + status + "). Please wait a moment and try again.";
       continue;
     }
+
     try {
       const raw = JSON.parse(text);
-      outputText = extractCandidateText_(raw);
-      if (!outputText) {
-        lastError = 'Gemini returned an empty response.';
-        continue;
-      }
+      const outputText = extractCandidateText_(raw);
+      
+      if (!outputText) throw new Error("Empty AI response");
+
       const cleanedJson = extractJsonText_(outputText);
       const parsed = JSON.parse(cleanedJson);
+      
+      // Normalize and Validate
       const lesson = normalizeLesson_(parsed, request);
       validateLesson_(lesson, request);
+      
       return lesson;
+
     } catch (err) {
+      // 2. Handle Formatting/Validation Errors
       try {
-        const repaired = repairLessonJson_(outputText || text, schema, config.apiKey, config.model);
+        const repaired = repairLessonJson_(text, schema, config.apiKey, config.model);
         const lesson = normalizeLesson_(repaired, request);
         validateLesson_(lesson, request);
         return lesson;
       } catch (repairErr) {
-        lastError =
-          'Could not parse or validate lesson JSON: ' +
-          err.message +
-          ' | Repair attempt failed: ' +
-          repairErr.message;
+        lastError = "The AI had trouble organizing the content for this specific topic. Try simplifying your topic name or checking your internet connection.";
+        // Log the real error to your console for debugging
+        console.error("Technical Error Details:", err.message, "| Repair Error:", repairErr.message);
       }
     }
   }
-  throw new Error(lastError);
+
+  // 3. Final Fallback Error
+  throw new Error(lastError || "We couldn't generate the lesson guide. Please refine your topic and try again.");
 }
+
 function buildGeminiUrl_(apiKey, model) {
   return (
     'https://generativelanguage.googleapis.com/v1beta/' +
@@ -444,19 +448,23 @@ function buildPrompt_(request) {
   const templateFieldBehavior = getTemplateFieldBehavior_(request.templateType);
   const localContextGuidance = getLocalContextGuidance_();
   const difficultyGuidance = getDifficultyGuidance_(request.difficulty);
-  const practiceDesignGuidance = getPracticeDesignGuidance_(
-    request.templateType,
-    request.difficulty
-  );
+  const practiceDesignGuidance = getPracticeDesignGuidance_(request.templateType, request.difficulty);
   return [
     'You are an expert instructional content generator for classroom teachers.',
     'Create a classroom-ready lesson guide in JSON only.',
+    '',
+    'Grade-specific rule (CRITICAL):',
+    'If Grade Level contains "Grade 1", "Grade 2", "Kinder", or "Kindergarten", NEVER use variables (x, y, a, b), letters in equations, or algebraic notation. Use ONLY concrete numbers, pictures, counting, and simple addition/subtraction up to 20. Keep everything extremely visual and concrete.',
     '',
     'Required output:',
     '- Return valid JSON only.',
     '- Fill all schema fields completely and meaningfully.',
     '- Ensure every field is classroom-ready, specific, and useful.',
     '- Create EXACTLY ' + request.itemCount + ' practice items. Do not skip any.',
+    '',
+    'Template Specific Rule (GUIDED_NOTES):',
+    '- If Template Type is GUIDED_NOTES, successCriteria MUST start with "I can...".',
+    '- If Template Type is GUIDED_NOTES, lessonSummary MUST be exactly 3 direct sentences summarizing the lesson (no introductory "In this lesson..." phrases).',
     '',
     'Key concept rules:',
     '- Each key concept must include: heading, summary, formula, symbolMeaning, workedExample, misconception.',
@@ -493,7 +501,8 @@ function buildPrompt_(request) {
     '- Use \\[...\\] for standalone calculations or important formulas.',
     '- Do not use markdown fences.',
     '- Return JSON only.',
-    '- Because the output is JSON, every backslash inside KaTeX must be escaped as double backslashes, for example \\\\frac{3}{4} and \\\\times.',
+    '- Because the output is JSON, every backslash inside KaTeX must be escaped as double backslashes.',
+    '- For missing addends or blanks in math, use a simple "___" (three underscores) instead of \\text{___}.',
     '',
     'Instructional settings:',
     'Subject: ' + request.subject,
@@ -631,6 +640,17 @@ function getTemplateGuidance_(templateType) {
         '- Later items should involve transfer to new or less familiar situations.',
         '- Increase the thinking demand, not just the size of the numbers.'
       ].join('\n');
+      case 'GUIDED_NOTES':
+      return [
+        '- Purpose: Create a fill-in-the-blanks style note-taking guide.',
+        '- Tone: Instructional and organized.',
+        '- Objective: Rewrite the objective as at least 3 "I can..." statements.',
+        '- Key Concepts: Provide core definitions and rules.',
+        '- Solved Examples: Provide fully worked out solutions.',
+        '- Guided Practice: Provide problems with partial steps shown.',
+        '- Individual Practice: Provide problems for the student to solve alone.',
+        '- Wrap Up: A 2-3 sentence summary that concludes the lesson.'
+      ].join('\n');
     default:
       return [
         '- Purpose: create a full concept lesson for classroom instruction.',
@@ -690,6 +710,12 @@ function getTemplateFieldBehavior_(templateType) {
         '- Practice items must become more demanding as they progress.',
         '- At least half of the practice items should require multi-step reasoning, comparison, pattern recognition, or real-world transfer.',
         '- The later items should feel more challenging than standard on-level practice.'
+      ].join('\n');
+      case 'GUIDED_NOTES':
+      return [
+        '- successCriteria: Start every item with "I can".',
+        '- lessonSummary: Write exactly 3 sentences. No more, no less. Make them direct concluding statements.',
+        '- keyConcepts: Ensure summaries are descriptive enough to contain vocabulary terms for the fill-in-the-blanks feature.'
       ].join('\n');
     default:
       return [
@@ -946,6 +972,7 @@ function normalizeLesson_(lesson, fallbackRequest) {
   const base = lesson || {};
   const req = fallbackRequest || {};
   const expectedItemCount = toBoundedInteger_(req.itemCount, DEFAULT_ITEM_COUNT, 5, 20);
+
   lesson.practiceItems = (lesson.practiceItems || []).slice(0, expectedItemCount);
   const keyConcepts = Array.isArray(base.keyConcepts) ? base.keyConcepts : [];
   const practiceItems = Array.isArray(base.practiceItems) ? base.practiceItems : [];
@@ -1269,7 +1296,8 @@ function renderTemplateBody_(lesson, options) {
     REVIEW: renderReviewTemplate_,
     QUIZ: renderQuizTemplate_,
     REMEDIATION: renderRemediationTemplate_,
-    ENRICHMENT: renderEnrichmentTemplate_
+    ENRICHMENT: renderEnrichmentTemplate_,
+    GUIDED_NOTES: renderGuidedNotesTemplate_
   };
   return (renderers[templateType] || renderConceptTemplate_)(lesson, teacherView, forPrint);
 }
@@ -1396,28 +1424,37 @@ function renderObjectiveSection_(lesson) {
       </div>
     </section>
   `;
+
 }
 function renderSuccessCriteriaSection_(lesson) {
   if (!lesson.successCriteria || !lesson.successCriteria.length) {
     return '';
   }
+  
+  // 🛡️ THE CHECKBOX FIX: Using a table guarantees the PDF engine won't convert them to bullets
+  const listHtml = lesson.successCriteria.map(function (item, index) {
+    return `
+      <tr>
+        <td style="width: 25px; vertical-align: top; font-size: 18px; line-height: 1;">&#9744;</td>
+        <td style="vertical-align: top; padding-bottom: 8px;">
+          <div class="editable criteria-text" data-criteria-index="${index}">${escapeHtml_(item)}</div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
   return `
     <section>
       <h2 class="section-title">Success Criteria</h2>
       <div class="card">
-        <ul class="criteria-list">
-          ${lesson.successCriteria.map(function (item, index) {
-    return `
-            <li>
-              <div class="editable criteria-text" data-criteria-index="${index}">${escapeHtml_(item)}</div>
-            </li>
-          `;
-  }).join('')}
-        </ul>
+        <table style="width: 100%; border-collapse: collapse; border: none; margin: 0; padding: 0;">
+          ${listHtml}
+        </table>
       </div>
     </section>
   `;
 }
+
 function renderVocabularySection_(lesson, compact) {
   if (!lesson.vocabulary || !lesson.vocabulary.length) {
     return '';
@@ -2169,23 +2206,58 @@ function renderPrintableLessonHtml_(lesson, options) {
 }
 
 function renderPrintHeaderHtml_(lesson, teacherView, headerInfo) {
+  // Styles for the PDF engine to read directly
+  const cellStyle = "width: 33.3%; background-color: #f5f9ff; border: 1px solid #d9e6ff; border-radius: 8px; padding: 10px; vertical-align: top;";
+  const labelStyle = "font-size: 9px; font-weight: bold; color: #5b6b82; margin-bottom: 2px; text-transform: uppercase;";
+  const valueStyle = "font-size: 12px; font-weight: 600; color: #1c2e45;";
+
   return `
-    <header class="print-lesson-header">
-      <div class="print-doc-banner">
-        ${headerInfo.schoolName ? `<div class="print-school-name">${escapeHtml_(headerInfo.schoolName)}</div>` : ''}
-        ${headerInfo.customHeader ? `<div class="print-custom-header">${escapeHtml_(headerInfo.customHeader)}</div>` : ''}
+    <header style="font-family: Arial, sans-serif; border-top: 5px solid #0052cc; padding-top: 15px; margin-bottom: 20px;">
+      <div style="margin-bottom: 10px;">
+        ${headerInfo.schoolName ? `<div style="font-size: 16px; font-weight: bold; color: #0f2747;">${escapeHtml_(headerInfo.schoolName)}</div>` : ''}
+        ${headerInfo.customHeader ? `<div style="font-size: 12px; color: #5b6b82;">${escapeHtml_(headerInfo.customHeader)}</div>` : ''}
       </div>
-      <div class="print-eyebrow">${teacherView ? 'Teacher Copy' : 'Student Copy'}</div>
-      <h1 class="print-lesson-title">${escapeHtml_(lesson.title)}</h1>
-      <div class="print-header-grid">
-        <div class="print-meta-column"><div class="print-meta-label">Subject</div><div class="print-meta-value">${escapeHtml_(lesson.subject)}</div></div>
-        <div class="print-meta-column"><div class="print-meta-label">Grade Level</div><div class="print-meta-value">${escapeHtml_(lesson.gradeLevel)}</div></div>
-        <div class="print-meta-column"><div class="print-meta-label">Topic</div><div class="print-meta-value">${escapeHtml_(lesson.topic)}</div></div>
-        <div class="print-meta-column"><div class="print-meta-label">Template</div><div class="print-meta-value">${prettyEnum_(lesson.templateType)}</div></div>
-        <div class="print-meta-column"><div class="print-meta-label">Difficulty</div><div class="print-meta-value">${prettyEnum_(lesson.difficulty)}</div></div>
-        <div class="print-meta-column"><div class="print-meta-label">Quarter</div><div class="print-meta-value">${escapeHtml_(headerInfo.quarter || 'N/A')}</div></div>
-        <div class="print-teacher-full-row"><div class="print-meta-label">Teacher Name</div><div class="print-meta-value">${escapeHtml_(headerInfo.teacherName || '')}</div></div>
+      <div style="font-size: 11px; font-weight: bold; color: #0052cc; margin-bottom: 5px;">
+        ${teacherView ? 'TEACHER COPY' : 'STUDENT COPY'}
       </div>
+      <h1 style="font-size: 24px; margin: 0 0 15px 0; color: #0f2747;">${escapeHtml_(lesson.title)}</h1>
+
+      <table style="width: 100%; border-collapse: separate; border-spacing: 5px; table-layout: fixed;">
+        <tr>
+          <td style="${cellStyle}">
+            <div style="${labelStyle}">Subject</div>
+            <div style="${valueStyle}">${escapeHtml_(lesson.subject)}</div>
+          </td>
+          <td style="${cellStyle}">
+            <div style="${labelStyle}">Grade Level</div>
+            <div style="${valueStyle}">${escapeHtml_(lesson.gradeLevel)}</div>
+          </td>
+          <td style="${cellStyle}">
+            <div style="${labelStyle}">Topic</div>
+            <div style="${valueStyle}">${escapeHtml_(lesson.topic)}</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="${cellStyle}">
+            <div style="${labelStyle}">Template</div>
+            <div style="${valueStyle}">${prettyEnum_(lesson.templateType)}</div>
+          </td>
+          <td style="${cellStyle}">
+            <div style="${labelStyle}">Difficulty</div>
+            <div style="${valueStyle}">${prettyEnum_(lesson.difficulty)}</div>
+          </td>
+          <td style="${cellStyle}">
+            <div style="${labelStyle}">Quarter</div>
+            <div style="${valueStyle}">${escapeHtml_(headerInfo.quarter || 'N/A')}</div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="3" style="background-color: #f5f9ff; border: 1px solid #d9e6ff; border-radius: 8px; padding: 10px;">
+            <div style="${labelStyle}">Teacher Name</div>
+            <div style="${valueStyle}">${escapeHtml_(headerInfo.teacherName || '')}</div>
+          </td>
+        </tr>
+      </table>
     </header>
   `;
 }
@@ -2686,6 +2758,7 @@ function getSharedStyles_() {
  ***************************************/
 function repairLatexText_(value) {
   return String(value == null ? '' : value)
+  .replace(/\\text\{__+\}/g, '___') // Converts \text{___} to a plain string for easier rendering
     .replace(/\u0008(?=[A-Za-z])/g, '\\b')
     .replace(/\u000c(?=[A-Za-z])/g, '\\f')
     .replace(/\r(?=[A-Za-z])/g, '\\r')
@@ -2868,7 +2941,15 @@ function guidance_(lines) { return lines.map(line => `- ${line}`).join('\n'); }
  * Records app activity to the Logs tab.
  * Columns: Timestamp | Email Address | Status | Details | GeneratedContent
  */
-function writeToLog_(status, details, request = null) {
+/**
+ * Records app activity to the Logs tab.
+ * Enhanced to act as a database for generated lessons.
+ */
+/**
+ * Records app activity to the Logs tab.
+ * Column F now stores the raw JSON so lessons can be re-opened without AI costs.
+ */
+function writeToLog_(status, details, request = null, lesson = null) {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty('SHEET_ID');
   
@@ -2880,36 +2961,43 @@ function writeToLog_(status, details, request = null) {
   try {
     const ss = SpreadsheetApp.openById(sheetId);
     const sheet = ss.getSheetByName("Logs");
-    if (!sheet) {
-      console.warn("Logs tab not found in spreadsheet.");
-      return;
-    }
+    if (!sheet) return;
 
     const timestamp = new Date();
-    // Gets the email of the person currently using the app
     const email = Session.getActiveUser().getEmail() || "Unknown User";
 
-    // 1. Format the "GeneratedContent" for Column E
-    // We take the request object and turn it into a readable string
     let contentSummary = "N/A"; 
-    if (request && typeof request === 'object') {
+    let fullJsonData = ""; // This will go in Column F
+    
+    if (lesson && typeof lesson === 'object') {
+      contentSummary = [
+        `TOPIC: ${lesson.topic}`,
+        `ITEMS: ${lesson.practiceItems ? lesson.practiceItems.length : 0}`,
+        `SUMMARY: ${lesson.lessonSummary ? lesson.lessonSummary.substring(0, 80) + '...' : 'N/A'}`
+      ].join(" | ");
+      
+      // CRITICAL: Convert the object to a string so the sheet can store it
+      fullJsonData = JSON.stringify(lesson);
+    } 
+    else if (request && typeof request === 'object') {
       contentSummary = [
         `Subject: ${request.subject || 'N/A'}`,
-        `Level: ${request.gradeLevel || 'N/A'}`,
         `Topic: ${request.topic || 'N/A'}`,
         `Template: ${request.templateType || 'N/A'}`
       ].join(" | ");
-    } else if (typeof request === 'string') {
-      contentSummary = request; // Handle case where request might just be a string
+    } 
+    else if (typeof request === 'string') {
+      contentSummary = request;
     }
 
-    // 2. Append the row to match your 5 headers
+    // Append to Spreadsheet (6 Columns total)
     sheet.appendRow([
-      timestamp,      // Column A: Timestamp
-      email,          // Column B: Email Address
-      status,         // Column C: Status (SUCCESS/ERROR/DENIED)
-      details,        // Column D: Details (Message)
-      contentSummary  // Column E: GeneratedContent (Metadata)
+      timestamp,      // A: Timestamp
+      email,          // B: Email Address
+      status,         // C: Status
+      details,        // D: Details
+      contentSummary, // E: Content Summary
+      fullJsonData    // F: THE DATA VAULT (Hidden JSON)
     ]);
     
   } catch (e) {
@@ -2917,8 +3005,220 @@ function writeToLog_(status, details, request = null) {
   }
 }
 
+function renderGuidedNotesTemplate_(lesson, teacherView, forPrint) {
+  // 1. Safety check: Ensure practiceItems and keyConcepts exist to avoid crashes
+  const practiceItems = lesson.practiceItems || [];
+  const keyConcepts = lesson.keyConcepts || [];
+  const splitIndex = Math.ceil(practiceItems.length / 2);
+  
+  // 2. Custom "I Can" formatter (Fixed to handle empty criteria)
+  const objectivesHtml = (lesson.successCriteria && lesson.successCriteria.length) 
+    ? lesson.successCriteria.map(sc => `<li>I can ${escapeHtml_(sc.replace(/^I can\s+/i, ''))}</li>`).join('')
+    : `<li>I can explain the core concepts of ${escapeHtml_(lesson.topic)}</li>`;
+
+  // 3. Map Key Concepts with Cloze (Fill-in-the-blanks) logic
+  const conceptsHtml = keyConcepts.length > 0 
+    ? keyConcepts.map(item => 
+        `<div class="sub-card"><strong>${escapeHtml_(item.heading)}:</strong> ${createBlanks_(item.summary, lesson.vocabulary)}</div>`
+      ).join('')
+    : `<div class="card">No key concepts generated.</div>`;
+
+  // 4. Map Solved Examples 
+  // Note: We use escapeHtml_ on the heading, but NOT on workedExample 
+  // because workedExample usually contains KaTeX/HTML tags for math.
+  const solvedExamplesHtml = keyConcepts.length > 0
+    ? keyConcepts.map(item => 
+        `<div class="example-box"><strong>Example: ${escapeHtml_(item.heading)}</strong><br>${item.workedExample || ''}</div>`
+      ).join('')
+    : `<div class="card">No examples available.</div>`;
+
+  return [
+    // 1. Title (Centered CAPS) - Added 24px font size for better hierarchy
+    `<section style="text-align:center;"><h2 style="text-transform:uppercase; font-weight:800; font-size:24px; margin-bottom:20px;">${escapeHtml_(lesson.title)}</h2></section>`,
+    
+    // 2. Objectives (I can statements)
+    `<section><h2 class="section-title">Objectives</h2><div class="card"><ul class="criteria-list">${objectivesHtml}</ul></div></section>`,
+    
+    // 3. Key Concepts (Not all caps section title)
+    `<section><h2 class="section-title" style="text-transform:none;">Key Concepts</h2><div class="card">${conceptsHtml}</div></section>`,
+    
+    // 4. Solved Examples (Not all caps section title)
+    `<section><h2 class="section-title" style="text-transform:none;">Solved Examples</h2>${solvedExamplesHtml}</section>`,
+    
+    // 5. Guided Practice (First half)
+    renderPracticeGroupSection_(lesson, teacherView, forPrint, {
+      title: 'Guided Practice',
+      note: 'Complete these with your teacher.'
+    }, 0, splitIndex),
+    
+    // 6. Individual Practice (Second half)
+    renderPracticeGroupSection_(lesson, teacherView, forPrint, {
+      title: 'Individual Practice',
+      note: 'Show what you have learned.'
+    }, splitIndex, practiceItems.length),
+    
+    // 7. Wrap Up (Statement form summary)
+    `<section><h2 class="section-title">Wrap Up</h2><div class="card"><div class="section-note" style="font-style:normal;">${escapeHtml_(lesson.lessonSummary || 'Lesson complete.')}</div></div></section>`
+  ].join('');
+}
+
+/**
+ * Automatically creates blanks for vocabulary terms found in text
+ */
+function createBlanks_(text, vocabulary) {
+  if (!text || !vocabulary || vocabulary.length === 0) return text;
+  let processedText = text;
+  // Sort vocabulary by length (longest first) so we don't accidentally break words
+  const sortedVocab = [...vocabulary].sort((a, b) => b.term.length - a.term.length);
+  
+  sortedVocab.forEach(item => {
+    const term = item.term.trim();
+    if (term.length < 2) return;
+    const regex = new RegExp(`\\b${term}\\b`, 'gi');
+    processedText = processedText.replace(regex, `<span class="cloze-blank" style="display:inline-block; min-width:80px; border-bottom:1px solid #000;">&nbsp;</span>`);
+  });
+  return processedText;
+}
 
 
+/**
+ * Fetches the current user's generation history from the Logs sheet.
+ */
+function getUserHistory() {
+  const props = PropertiesService.getScriptProperties();
+  const sheetId = props.getProperty('SHEET_ID');
+  const email = Session.getActiveUser().getEmail();
+  
+  try {
+    const ss = SpreadsheetApp.openById(sheetId);
+    const sheet = ss.getSheetByName("Logs");
+    const data = sheet.getDataRange().getValues();
+    
+    // Filter rows: Must be this user, must be SUCCESS, and Column F (index 5) must not be empty
+    const history = data.slice(1) 
+      .filter(row => row[1] === email && row[2] === "SUCCESS" && row[5]) 
+      .map(row => ({
+        timestamp: Utilities.formatDate(new Date(row[0]), "GMT+8", "MMM dd, yyyy HH:mm"),
+        details: row[3],
+        summary: row[4],
+        // Pull the topic directly from the summary string
+        topic: row[4].split('|')[0].replace('TOPIC: ', '').trim(),
+        // NEW: Grab the hidden JSON string from Column F
+        fullJson: row[5] 
+      }))
+      .reverse(); 
+
+    return history.slice(0, 20); 
+  } catch (e) {
+    console.error("History Fetch Failed: " + e.toString());
+    return [];
+  }
+}
 
 
+/**
+ * Receives the perfectly formatted PDF from the browser and saves it.
+ * This version handles both raw base64 and Data-URI prefixed strings.
+ */
+function saveLessonToDrive(lessonObj, requestObj, copyModeStr, filenameStr) {
+  if (!lessonObj) throw new Error('Lesson data dropped. Try again.');
 
+  try {
+    const printData = getPrintableLessonHtml({
+      lesson: lessonObj,
+      request: requestObj || {},
+      copyMode: copyModeStr || 'STUDENT'
+    });
+    
+    let finalHtml = printData.html;
+    
+    // 🛠️ THE MATH FIX: Convert KaTeX text into crisp Math Images!
+    // 1. Convert Display Math: \[ ... \]
+    finalHtml = finalHtml.replace(/\\\[([\s\S]*?)\\\]/g, function(match, mathStr) {
+      const cleanMath = mathStr.trim();
+      // If it's incredibly simple, just leave it as text (no image needed)
+      if (/^[a-zA-Z0-9\+\-\=\s]+$/.test(cleanMath)) {
+          return `<div style="text-align:center; margin:10px 0; font-family: monospace; font-size: 16px;">${cleanMath}</div>`;
+      }
+      const enc = encodeURIComponent(cleanMath);
+      return `<div style="text-align:center; margin:10px 0;"><img src="https://chart.googleapis.com/chart?cht=tx&chl=${enc}" style="max-width:100%;" alt="Math Equation" /></div>`;
+    });
+    
+    // 2. Convert Inline Math: \( ... \)
+    finalHtml = finalHtml.replace(/\\\(([\s\S]*?)\\\)/g, function(match, mathStr) {
+      const cleanMath = mathStr.trim();
+      
+      // 🛡️ THE FIX: If the match is JUST an equal sign, plus sign, or simple text, just print the text.
+      if (cleanMath === '=' || cleanMath === '+' || cleanMath === '-' || cleanMath === '/' || /^[a-zA-Z0-9\s]+$/.test(cleanMath)) {
+          return `<span style="font-family: monospace; font-size: 14px;">${cleanMath}</span>`;
+      }
+      
+      // Otherwise, generate the image for fractions, exponents, etc.
+      const enc = encodeURIComponent(cleanMath);
+      return `<img src="https://chart.googleapis.com/chart?cht=tx&chl=${enc}" style="vertical-align:middle; max-height: 1.5em;" alt="Math" />`;
+    });
+
+    // Setup Drive Folder
+    const folderName = "Lesson Guide by Teacher MJ - PDF";
+    const folders = DriveApp.getFoldersByName(folderName);
+    const folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+    
+    // Create and Save PDF
+    const blob = Utilities.newBlob(finalHtml, 'text/html', filenameStr || 'lesson.pdf')
+                          .getAs('application/pdf');
+    
+    const file = folder.createFile(blob);
+    
+    return { 
+      success: true, 
+      folderUrl: folder.getUrl(), 
+      fileUrl: file.getUrl() 
+    };
+  } catch (e) {
+    throw new Error("Drive Save Error: " + e.message);
+  }
+}
+
+function createPdfFromHtml(htmlString, filename) {
+  try {
+    // We wrap the pre-rendered HTML with the necessary CSS so the math fractions stack correctly
+    const fullHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+          <style>
+            ${getPrintDesignTokensCss_()}
+            ${getPrintBaseStyles_()}
+            ${getPrintTemplateStyles_()}
+            ${getSharedStyles_()}
+            ${getPrintStyles_('Lesson Guide')}
+          </style>
+        </head>
+        <body class="print-mode">
+          <div class="print-doc">
+            ${htmlString}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const folderName = "Lesson Guide by Teacher MJ - PDF";
+    const folders = DriveApp.getFoldersByName(folderName);
+    const folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+
+    const blob = Utilities.newBlob(fullHtml, 'text/html', filename || 'lesson.pdf')
+                          .getAs('application/pdf');
+
+    const file = folder.createFile(blob);
+
+    return {
+      success: true,
+      folderUrl: folder.getUrl(),
+      fileUrl: file.getUrl()
+    };
+  } catch (e) {
+    throw new Error("Drive Save Error: " + e.message);
+  }
+}
