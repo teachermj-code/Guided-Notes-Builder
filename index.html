@@ -1046,6 +1046,24 @@
       border: 2px solid #0c6b2f !important;
       transform: scale(1.05);
     }
+
+    .history-card {
+  margin-left: 30px; /* Creates space for the checkbox on the left */
+  position: relative;
+  overflow: visible;
+}
+
+.history-select {
+  position: absolute;
+  left: -25px; /* Pulls checkbox back into that margin space */
+  top: 50%;
+  transform: translateY(-50%) scale(1.3);
+  cursor: pointer;
+}
+
+
+
+
   </style>
 
 </head>
@@ -1079,8 +1097,49 @@
           <button class="btn btn-neutral" style="flex:1" onclick="loadHistory()">History</button>
         </div>
 
-        <div id="historyView" style="display:none;">
+<div id="historyView" style="display:none;">
+          
+          <div class="panel-section" style="margin-top: 0; margin-bottom: 15px; border: 2px solid #e2e8f0; background: #fafcff;">
+            <div class="section-heading" style="color: var(--brand); font-size: 14px;">Smart Search</div>
+            <div class="checkbox-grid" style="gap: 10px;">
+              <div class="field" style="margin-bottom: 0;">
+                <label>Grade</label>
+                <input type="text" id="searchGrade" placeholder="Grade 1">
+              </div>
+              <div class="field" style="margin-bottom: 0;">
+                <label>Topic</label>
+                <input type="text" id="searchTopic" placeholder="Integers">
+              </div>
+            </div>
+            
+            <div class="field" style="margin-top: 10px;">
+              <label>Template (Optional)</label>
+              <select id="searchTemplate">
+                <option value="ALL">All Templates</option>
+                <option value="CONCEPT">Concept Lesson</option>
+                <option value="GUIDED_PRACTICE">Guided Practice</option>
+                <option value="REVIEW">Review Sheet</option>
+                <option value="QUIZ">Quiz Style</option>
+                <option value="REMEDIATION">Remediation</option>
+                <option value="ENRICHMENT">Enrichment</option>
+                <option value="GUIDED_NOTES">Guided Notes</option>
+              </select>
+            </div>
+
+            <div class="actions input-actions" style="margin-top: 10px;">
+              <button class="btn btn-primary" onclick="executeSmartSearch()" style="flex:2">Search History</button>
+              <button class="btn btn-neutral" onclick="loadHistory()" style="flex:1">Reset</button>
+            </div>
+          </div>
+
+          <div id="bulkActionsBar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px;">
+            <button class="btn btn-alt" id="bulkPrintBtn" onclick="bulkPrintSelected()" style="font-size: 11px; padding: 6px 12px; display:none; background: #059669; color: white; border: none;">🖨️ Print Selected</button>
+            <button class="btn btn-neutral" onclick="confirmClearAll()" style="font-size: 11px; color: #dc2626; border-color: #fca5a5; padding: 6px 12px;">🗑️ Clear History</button>
+          </div>
+
+          <h3 id="historyTitle" style="font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Recent Lessons</h3>
           <div id="historyList">Loading history...</div>
+          
         </div>
 
         <div id="setupView">
@@ -1279,6 +1338,35 @@
     let hasManualEdits = false;
 
 
+let confirmCallback = null;
+
+    // The beautiful replacement for confirm()
+    function showCustomConfirm(title, message, icon, color, callback) {
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMessage').textContent = message;
+      document.getElementById('confirmIcon').textContent = icon;
+      document.getElementById('customConfirmModal').style.display = 'flex';
+      
+      const yesBtn = document.getElementById('confirmYesBtn');
+      yesBtn.style.backgroundColor = color;
+      yesBtn.style.borderColor = color;
+      
+      confirmCallback = callback; // Save the action to perform if they click Yes
+    }
+
+    function closeCustomConfirm(confirmed) {
+      document.getElementById('customConfirmModal').style.display = 'none';
+      if (confirmed && confirmCallback) {
+        confirmCallback(); // Run the saved action
+      }
+      confirmCallback = null;
+    }
+
+    // Link the "Yes" button in the modal to the logic
+    document.getElementById('confirmYesBtn').onclick = function() {
+      closeCustomConfirm(true);
+    };
+
 
 function reopenLesson(jsonString) {
   try {
@@ -1318,50 +1406,225 @@ function showView(view) {
   document.getElementById('historyView').style.display = view === 'history' ? 'block' : 'none';
 }
 
-function loadHistory() {
-  showView('history');
-  const list = document.getElementById('historyList');
-  list.innerHTML = '<div class="status">Opening your library...</div>';
+// Triggered when the user clicks the "History" tab
+    function loadHistory() {
+      showView('history');
+      const list = document.getElementById('historyList');
+      document.getElementById('historyTitle').textContent = "Recent Lessons";
+      list.innerHTML = '<div class="status">Loading recent lessons...</div>';
 
-  google.script.run
-    .withSuccessHandler(function(history) {
-      if (!history || history.length === 0) {
-        list.innerHTML = `
-          <div class="empty-state-minimal">
-            <div class="empty-icon-minimal">🗃️</div>
-            <p>Your library is empty. Generate a lesson to see it here!</p>
-          </div>`;
-        return;
+      // Clear the search fields back to default
+      document.getElementById('searchGrade').value = '';
+      document.getElementById('searchTopic').value = '';
+      document.getElementById('searchTemplate').value = 'ALL';
+
+      // Fetch ONLY top 5
+      google.script.run
+        .withSuccessHandler(function(history) {
+          renderHistoryList(history, false);
+        })
+        .getUserHistory(); 
+    }
+
+    // Triggered when the user clicks "Search History"
+    function executeSmartSearch() {
+      const grade = document.getElementById('searchGrade').value.trim();
+      const topic = document.getElementById('searchTopic').value.trim();
+      const template = document.getElementById('searchTemplate').value;
+
+      // Require at least Grade or Topic to search
+      if (!grade && !topic && template === 'ALL') {
+         setStatus("Please enter a Grade or Topic to search.", "warn");
+         return;
       }
 
-      let html = '<div class="history-grid" style="display:flex; flex-direction:column; gap:12px;">';
-      
-      history.forEach((item, index) => {
-        // We use a temporary global storage to avoid messy string escaping in the onclick
-        window[`historyItem_${index}`] = item.fullJson;
+      const list = document.getElementById('historyList');
+      document.getElementById('historyTitle').textContent = "Search Results";
+      list.innerHTML = '<div class="status">Searching your entire library...</div>';
 
-        html += `
-          <div class="panel-section history-card" style="border-left: 4px solid var(--brand); transition: transform 0.2s;">
-            <div style="font-size:10px; color:var(--muted); font-weight:bold; text-transform:uppercase;">${item.timestamp}</div>
-            <div style="font-weight:800; margin:4px 0; color:var(--brand-dark); font-size:15px;">${item.topic}</div>
-            <div style="font-size:12px; line-height:1.4; color:#4a5568; margin-bottom:12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
-              ${item.summary}
-            </div>
-            <div style="display:flex; gap:8px;">
-              <button class="btn btn-primary" style="flex:1; min-height:36px; font-size:12px;" 
-                onclick="reopenLesson(window['historyItem_${index}'])">
-                Re-open Preview
-              </button>
-            </div>
-          </div>
-        `;
-      });
+      // Send the query to the server
+      google.script.run
+        .withSuccessHandler(function(results) {
+          renderHistoryList(results, true);
+        })
+        .searchUserHistory({ grade: grade, topic: topic, template: template });
+    }
+
+// 🎨 THE ULTIMATE RENDERER: Colors + Checkboxes + Delete + Smart Search
+    function renderHistoryList(historyData, isSearch) {
+       const list = document.getElementById('historyList');
+       const bulkBtn = document.getElementById('bulkPrintBtn');
+       if (bulkBtn) bulkBtn.style.display = 'none'; 
+
+       if (!historyData || historyData.length === 0) {
+         list.innerHTML = `
+           <div class="empty-state-minimal" style="margin-top: 20px;">
+             <div class="empty-icon-minimal">${isSearch ? '🔍' : '📚'}</div>
+             <p>${isSearch ? 'No lessons match your search.' : 'Your library is empty.'}</p>
+           </div>`;
+         return;
+       }
+
+       const colorMap = {
+          'CONCEPT': '#2563eb', 'GUIDED_PRACTICE': '#059669', 'REVIEW': '#ea580c', 
+          'QUIZ': '#dc2626', 'REMEDIATION': '#7c3aed', 'ENRICHMENT': '#0d9488', 'GUIDED_NOTES': '#4f46e5'
+       };
+
+       let html = '<div style="display:flex; flex-direction:column; gap:12px;">';
+       
+       historyData.forEach((item, index) => {
+         window[`historyItem_${index}`] = item.fullJson;
+         
+         // Color Logic
+         let type = 'CONCEPT';
+         try { type = JSON.parse(item.fullJson).templateType || 'CONCEPT'; } catch(e){}
+         let color = colorMap[type] || '#2563eb';
+         let templateBadge = type.replace('_', ' ');
+
+         html += `
+           <div class="panel-section history-card" style="border-left: 4px solid ${color}; position:relative; transition: transform 0.2s;">
+             
+             <div style="position:absolute; left:-28px; top:40%;">
+                <input type="checkbox" class="history-select" value="${index}" onchange="toggleBulkBtn()" style="transform: scale(1.2); cursor:pointer;">
+             </div>
+
+             <div onclick="deleteLesson('${item.timestamp}', '${item.topic}')" 
+                  title="Delete this lesson"
+                  style="position:absolute; right:12px; top:12px; cursor:pointer; font-size:16px; color:#cbd5e0; line-height:1;" 
+                  onmouseover="this.style.color='#dc2626'" 
+                  onmouseout="this.style.color='#cbd5e0'">✕</div>
+
+             <div style="font-size:10px; color:var(--muted); font-weight:bold; text-transform:uppercase; display:flex; justify-content:space-between; padding-right:20px;">
+                <span>${item.timestamp}</span>
+                <span style="color: ${color};">${templateBadge}</span>
+             </div>
+             
+             <div style="font-weight:800; margin:4px 0; color:var(--brand-dark); font-size:15px;">${item.topic}</div>
+             
+             <div style="font-size:12px; line-height:1.4; color:#4a5568; margin-bottom:12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+               ${item.summary || 'Saved Lesson'}
+             </div>
+
+             <div style="display:flex; gap:8px;">
+               <button style="flex:1; min-height:36px; font-size:12px; background-color: ${color}; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;"
+                 onclick="reopenLesson(window['historyItem_${index}'])">
+                 Re-open Preview
+               </button>
+             </div>
+           </div>
+         `;
+       });
+       
+       html += '</div>';
+       list.innerHTML = html;
+    }
+
+    function toggleBulkBtn() {
+      const checked = document.querySelectorAll('.history-select:checked');
+      const btn = document.getElementById('bulkPrintBtn');
+      if (btn) btn.style.display = checked.length > 0 ? 'block' : 'none';
+    }
+
+    function deleteLesson(timestamp, topic) {
+      if (!confirm(`Delete "${topic}" from your history forever?`)) return;
+      google.script.run.withSuccessHandler(() => {
+        setStatus("Lesson deleted.", "success");
+        loadHistory(); // Refresh the list
+      }).deleteLessonFromSheet(timestamp, topic);
+    }
+
+    function confirmClearAll() {
+      const warning = "⚠️ DANGER: This will wipe your ENTIRE lesson history.\n\nThis cannot be undone. Are you absolutely sure?";
+      if (!confirm(warning)) return;
       
-      html += '</div>';
-      list.innerHTML = html;
-    })
-    .getUserHistory();
-}
+      google.script.run.withSuccessHandler(() => {
+        setStatus("History cleared.", "success");
+        loadHistory();
+      }).clearAllUserHistory();
+    }
+
+// 🖨️ Updated Bulk Print with Modern Modal
+function bulkPrintSelected() {
+      const checkedBoxes = document.querySelectorAll('.history-select:checked');
+      const selectedIndices = Array.from(checkedBoxes).map(cb => cb.value);
+      
+      if (selectedIndices.length === 0) return;
+
+      // 1. Update modal message and show it
+      document.getElementById('printModalMsg').textContent = `Ready to export ${selectedIndices.length} lessons. Choose your copy type:`;
+      document.getElementById('printOptionsModal').style.display = 'flex';
+
+      // 2. Handle Teacher Copy Choice
+      document.getElementById('btnTeacherCopy').onclick = function() {
+        runBulkExportSequence(selectedIndices, 'TEACHER');
+      };
+
+      // 3. Handle Student Copy Choice
+      document.getElementById('btnStudentCopy').onclick = function() {
+        runBulkExportSequence(selectedIndices, 'STUDENT');
+      };
+    }
+
+    // 🔄 THE LOOP ENGINE
+    function runBulkExportSequence(indices, type) {
+      // Hide modal
+      document.getElementById('printOptionsModal').style.display = 'none';
+      setStatus(`Starting bulk export for ${indices.length} lessons...`, "info");
+
+      let i = 0;
+      function next() {
+        if (i >= indices.length) {
+          setStatus("Bulk Export Complete!", "success");
+          return;
+        }
+
+        const lessonJson = window[`historyItem_${indices[i]}`];
+        
+        // Step A: Activate Re-open Preview
+        reopenLesson(lessonJson);
+
+        // Step B: Wait for the preview to render (1.5s), then trigger the specific PDF export
+        setTimeout(() => {
+          if (type === 'TEACHER') {
+            exportTeacherPDF(); // <-- Matches your existing export function name
+          } else {
+            exportStudentPDF(); // <-- Matches your existing export function name
+          }
+
+          i++;
+          // Step C: Small pause between files so the browser doesn't choke
+          setTimeout(next, 1000); 
+        }, 1500);
+      }
+
+      next();
+    }
+
+    // 🗑️ Updated Delete with Modern Modal
+    function deleteLesson(timestamp, topic) {
+      showCustomConfirm(
+        "Delete Lesson", 
+        `Permanently remove "${topic}" from your history?`, 
+        "🗑️", 
+        "#dc2626", // Red theme
+        function() {
+          google.script.run.withSuccessHandler(() => loadHistory()).deleteLessonFromSheet(timestamp, topic);
+        }
+      );
+    }
+
+    // ⚠️ Updated Clear All with Modern Modal
+    function confirmClearAll() {
+      showCustomConfirm(
+        "Wipe History", 
+        "This will delete your entire lesson history forever. Are you absolutely sure?", 
+        "☢️", 
+        "#000000", // Black/Danger theme
+        function() {
+          google.script.run.withSuccessHandler(() => loadHistory()).clearAllUserHistory();
+        }
+      );
+    }
 
 let lastFolderUrl = ""; // Ensure this global variable exists at the top of your script
 
@@ -1884,6 +2147,44 @@ function showSuccessCelebration() {
       <button class="btn btn-secondary" style="margin-top:10px;" onclick="closeMobileMenu()">Close</button>
     </div>
   </div>
+
+  <div id="customConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
+  <div style="background:white; padding:30px; border-radius:20px; width:90%; max-width:400px; text-align:center; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); animation: modalPop 0.3s ease-out;">
+    <div id="confirmIcon" style="font-size: 40px; margin-bottom: 15px;">⚠️</div>
+    <h3 id="confirmTitle" style="margin:0 0 10px 0; font-size:20px; color:#1a202c; font-weight:800;">Are you sure?</h3>
+    <p id="confirmMessage" style="color:#4a5568; font-size:14px; line-height:1.5; margin-bottom:25px;">This action cannot be undone.</p>
+    
+    <div style="display:flex; gap:12px; justify-content:center;">
+      <button onclick="closeCustomConfirm(false)" class="btn btn-neutral" style="flex:1; padding:12px; border-radius:12px; font-weight:600;">Cancel</button>
+      <button id="confirmYesBtn" class="btn btn-primary" style="flex:1; padding:12px; border-radius:12px; font-weight:600; background:#dc2626; border-color:#dc2626; color:white;">Yes, Proceed</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes modalPop {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+</style>
+
+<div id="printOptionsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter: blur(5px);">
+      <div style="background:white; padding:30px; border-radius:20px; width:90%; max-width:450px; text-align:center; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); animation: modalPop 0.25s ease-out;">
+        <div style="font-size: 50px; margin-bottom: 10px;">🖨️</div>
+        <h3 style="margin:0 0 10px 0; font-size:22px; color:#1a202c; font-weight:800;">Bulk Export Options</h3>
+        <p id="printModalMsg" style="color:#4a5568; font-size:15px; line-height:1.6; margin-bottom:25px;">Select which version you would like to export for the selected lessons.</p>
+        
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; gap:12px;">
+            <button id="btnTeacherCopy" class="btn" style="flex:1; padding:15px; border-radius:12px; font-weight:700; color:white; background:#2563eb; border:none; cursor:pointer;">Teacher Copy (with Keys)</button>
+            <button id="btnStudentCopy" class="btn" style="flex:1; padding:15px; border-radius:12px; font-weight:700; color:white; background:#059669; border:none; cursor:pointer;">Student Copy (Worksheet)</button>
+          </div>
+          <button onclick="document.getElementById('printOptionsModal').style.display='none'" class="btn btn-neutral" style="width:100%; padding:12px; border-radius:12px; font-weight:600; cursor:pointer; margin-top:5px;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+  </body> </html>
 
 </body>
 

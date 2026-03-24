@@ -263,10 +263,10 @@ function buildLessonGuide(formData) {
   try {
     const lesson = generateLessonJson_(request);
     
-    // Log the event
-    // Status: SUCCESS
-    // Details: "Lesson Generated Successfully"
-    // Content: Passing the 'request' object for Column E
+    // 🎨 THE COLOR FIX: Stamp the template type into the data BEFORE saving!
+    lesson.templateType = request.templateType;
+    
+    // Pass the perfectly stamped lesson to the logger
     writeToLog_("SUCCESS", "Lesson Generated Successfully", request, lesson);
 
     return {
@@ -281,7 +281,6 @@ function buildLessonGuide(formData) {
       })
     };
   } catch (err) {
-    // Log the error
     writeToLog_("ERROR", err.toString(), request);
     throw err;
   }
@@ -3084,6 +3083,9 @@ function createBlanks_(text, vocabulary) {
 /**
  * Fetches the current user's generation history from the Logs sheet.
  */
+/**
+ * Fetches ONLY the 5 most recent lessons for lightning-fast loading.
+ */
 function getUserHistory() {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty('SHEET_ID');
@@ -3094,23 +3096,91 @@ function getUserHistory() {
     const sheet = ss.getSheetByName("Logs");
     const data = sheet.getDataRange().getValues();
     
-    // Filter rows: Must be this user, must be SUCCESS, and Column F (index 5) must not be empty
+    // Filter rows: Must be this user, must be SUCCESS, and Column F must not be empty
     const history = data.slice(1) 
       .filter(row => row[1] === email && row[2] === "SUCCESS" && row[5]) 
       .map(row => ({
         timestamp: Utilities.formatDate(new Date(row[0]), "GMT+8", "MMM dd, yyyy HH:mm"),
         details: row[3],
         summary: row[4],
-        // Pull the topic directly from the summary string
         topic: row[4].split('|')[0].replace('TOPIC: ', '').trim(),
-        // NEW: Grab the hidden JSON string from Column F
         fullJson: row[5] 
       }))
       .reverse(); 
 
-    return history.slice(0, 20); 
+    // ONLY return the top 5 to keep the app blazing fast
+    return history.slice(0, 5); 
   } catch (e) {
     console.error("History Fetch Failed: " + e.toString());
+    return [];
+  }
+}
+
+/**
+ * Performs a Server-Side Smart Search through ALL history without overloading the browser.
+ */
+function searchUserHistory(query) {
+  const props = PropertiesService.getScriptProperties();
+  const sheetId = props.getProperty('SHEET_ID');
+  const email = Session.getActiveUser().getEmail();
+  
+  if (!sheetId) return [];
+
+  try {
+    const ss = SpreadsheetApp.openById(sheetId);
+    const sheet = ss.getSheetByName("Logs");
+    const data = sheet.getDataRange().getValues();
+
+    // Clean up the search terms
+    const searchGrade = (query.grade || '').toLowerCase().trim();
+    const searchTopic = (query.topic || '').toLowerCase().trim();
+    const searchTemplate = query.template;
+
+    let results = [];
+
+    // Loop backwards so we get newest first
+    for (let i = data.length - 1; i > 0; i--) {
+      const row = data[i];
+      
+      // Check if it belongs to this user and has data
+      if (row[1] === email && row[2] === "SUCCESS" && row[5]) {
+        try {
+          const lessonData = JSON.parse(row[5]);
+          const lessonGrade = (lessonData.gradeLevel || '').toLowerCase();
+          const lessonTopic = (lessonData.topic || '').toLowerCase();
+          const lessonTemplate = lessonData.templateType || '';
+
+          let isMatch = true;
+
+          // Smart Fuzzy Matching
+          if (searchGrade && !lessonGrade.includes(searchGrade)) isMatch = false;
+          if (searchTopic && !lessonTopic.includes(searchTopic)) isMatch = false;
+          
+          // Exact Match for Template (unless they chose ALL)
+          if (searchTemplate !== 'ALL' && lessonTemplate !== searchTemplate) isMatch = false;
+
+          // If it matches all criteria, add it to our results!
+          if (isMatch) {
+            results.push({
+              timestamp: Utilities.formatDate(new Date(row[0]), "GMT+8", "MMM dd, yyyy HH:mm"),
+              details: row[3],
+              summary: row[4].split('|')[0].replace('TOPIC: ', '').trim(),
+              topic: lessonData.topic,
+              fullJson: row[5]
+            });
+          }
+          
+          // Cap search results at 50 to prevent freezing if they search something too broad
+          if (results.length >= 50) break;
+          
+        } catch (e) {
+          // Ignore rows with broken JSON
+        }
+      }
+    }
+    return results;
+  } catch (e) {
+    console.error("Smart Search Failed: " + e.toString());
     return [];
   }
 }
@@ -3221,4 +3291,46 @@ function createPdfFromHtml(htmlString, filename) {
   } catch (e) {
     throw new Error("Drive Save Error: " + e.message);
   }
+}
+
+/**
+ * Deletes a single lesson row based on its unique timestamp and topic
+ */
+function deleteLessonFromSheet(timestamp, topic) {
+  const props = PropertiesService.getScriptProperties();
+  const sheetId = props.getProperty('SHEET_ID');
+  const ss = SpreadsheetApp.openById(sheetId);
+  const sheet = ss.getSheetByName("Logs");
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = data.length - 1; i > 0; i--) {
+    const rowDate = Utilities.formatDate(new Date(data[i][0]), "GMT+8", "MMM dd, yyyy HH:mm");
+    const rowTopic = data[i][4].split('|')[0].replace('TOPIC: ', '').trim();
+    
+    if (rowDate === timestamp && rowTopic === topic) {
+      sheet.deleteRow(i + 1);
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * CLEARS EVERYTHING for the current user
+ */
+function clearAllUserHistory() {
+  const props = PropertiesService.getScriptProperties();
+  const sheetId = props.getProperty('SHEET_ID');
+  const email = Session.getActiveUser().getEmail();
+  const ss = SpreadsheetApp.openById(sheetId);
+  const sheet = ss.getSheetByName("Logs");
+  const data = sheet.getDataRange().getValues();
+  
+  // Delete rows from bottom to top to avoid index shifting
+  for (let i = data.length - 1; i > 0; i--) {
+    if (data[i][1] === email) {
+      sheet.deleteRow(i + 1);
+    }
+  }
+  return true;
 }
