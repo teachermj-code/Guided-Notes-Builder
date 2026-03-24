@@ -3334,3 +3334,55 @@ function clearAllUserHistory() {
   }
   return true;
 }
+
+
+/**
+ * Fetches the user's profile. Returns null if they haven't set it up.
+ */
+function getUserProfile() {
+  const email = Session.getActiveUser().getEmail();
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName("Profiles");
+  
+  // Create the sheet if it doesn't exist yet
+  if (!sheet) {
+    sheet = ss.insertSheet("Profiles");
+    sheet.appendRow(["Email", "Name", "School", "Grade/Department", "JoinDate"]);
+    return null;
+  }
+
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0].toLowerCase() === email.toLowerCase()) {
+      return {
+        name: data[i][1],
+        school: data[i][2],
+        grade: data[i][3],
+        isAdmin: email === "your-admin-email@gmail.com" // Set your email here
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Saves or updates the user's profile
+ */
+function saveUserProfile(profileData) {
+  const email = Session.getActiveUser().getEmail();
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName("Profiles");
+  const data = sheet.getDataRange().getValues();
+  
+  const rowData = [email, profileData.name, profileData.school, profileData.grade, new Date()];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0].toLowerCase() === email.toLowerCase()) {
+      sheet.getRange(i + 1, 1, 1, 5).setValues([rowData]);
+      return { success: true };
+    }
+  }
+  
+  sheet.appendRow(rowData);
+  return { success: true };
+}

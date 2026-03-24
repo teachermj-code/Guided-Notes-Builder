@@ -135,6 +135,63 @@
 
     }
 
+    .hero-dashboard-wrapper {
+  margin-bottom: 25px;
+  perspective: 1000px;
+}
+
+.hero-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: white;
+  padding: 30px;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+}
+
+.profile-badge {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.avatar {
+  width: 60px;
+  height: 60px;
+  background: var(--template-accent, #0052cc);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.hero-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.hero-form-grid input, .hero-form-grid select {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.admin-gear {
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: white;
+  padding: 8px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
     .hero {
 
       background: linear-gradient(180deg, #eaf8ff 0%, #d9f0fb 100%);
@@ -1073,18 +1130,84 @@
 
   <div class="shell">
 
-    <div class="hero">
+ <div id="heroContainer" class="hero-dashboard-wrapper">
+  <div class="hero-loading">Loading your dashboard...</div>
+</div>
 
-      <div class="hero-main hero-centered">
+<script>
+  // Run this when the page loads
+  window.addEventListener('load', function() {
+    loadHeroState();
+  });
 
-        <h1>LESSON GUIDE BUILDER</h1>
+  function loadHeroState() {
+    google.script.run.withSuccessHandler(function(profile) {
+      const container = document.getElementById('heroContainer');
+      
+      if (!profile) {
+        // STATE A: Show Onboarding Setup
+        container.innerHTML = renderHeroSetupForm();
+      } else {
+        // STATE B: Show Dashboard
+        container.innerHTML = renderHeroDashboard(profile);
+        // ⚡ AUTO-FILL: Pre-fill your existing lesson form
+        if(document.getElementById('teacherName')) document.getElementById('teacherName').value = profile.name;
+        if(document.getElementById('schoolName')) document.getElementById('schoolName').value = profile.school;
+      }
+    }).getUserProfile();
+  }
 
-        <p>Developed by Teacher MJ ©
-          <?!= getCurrentYear_() ?>
-        </p>
-
+  function renderHeroSetupForm() {
+    return `
+      <div class="hero-card setup-mode">
+        <div class="hero-text">
+          <h1>Welcome, Educator! 🎓</h1>
+          <p>Let's personalize your workspace. This info will auto-fill your lesson guides.</p>
+        </div>
+        <div class="hero-form-grid">
+          <input type="text" id="setupName" placeholder="Full Name (e.g., Mr. Cruz)">
+          <input type="text" id="setupSchool" placeholder="School Name">
+          <select id="setupGrade">
+            <option value="Elementary">Elementary</option>
+            <option value="Junior High">Junior High</option>
+            <option value="Senior High">Senior High</option>
+          </select>
+          <button class="btn-primary" onclick="handleSaveProfile()">Save & Start Planning</button>
+        </div>
       </div>
+    `;
+  }
 
+  function renderHeroDashboard(profile) {
+    return `
+      <div class="hero-card dashboard-mode">
+        <div class="profile-badge">
+          <div class="avatar">${profile.name[0]}</div>
+          <div class="badge-text">
+            <h2>Welcome back, ${profile.name}!</h2>
+            <p>📍 ${profile.school} | 📚 ${profile.grade}</p>
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-item">
+            <span class="stat-label">System Status</span>
+            <span class="stat-value">Ready ✅</span>
+          </div>
+          ${profile.isAdmin ? '<button class="admin-gear" onclick="openAdmin()">⚙️ Admin Console</button>' : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function handleSaveProfile() {
+    const data = {
+      name: document.getElementById('setupName').value,
+      school: document.getElementById('setupSchool').value,
+      grade: document.getElementById('setupGrade').value
+    };
+    google.script.run.withSuccessHandler(loadHeroState).saveUserProfile(data);
+  }
+</script>
     </div>
 
     <div class="grid">
