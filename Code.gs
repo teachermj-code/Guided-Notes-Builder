@@ -2953,16 +2953,8 @@ function hasAny_(text, keys) { return keys.some(k => text.includes(k)); }
 function guidance_(lines) { return lines.map(line => `- ${line}`).join('\n'); }
 
 /**
- * Records app activity to the Logs tab.
- * Columns: Timestamp | Email Address | Status | Details | GeneratedContent
- */
-/**
- * Records app activity to the Logs tab.
- * Enhanced to act as a database for generated lessons.
- */
-/**
- * Records app activity to the Logs tab.
- * Column F now stores the raw JSON so lessons can be re-opened without AI costs.
+ * Records app activity to the Logs tab AND the permanent Master tab.
+ * Column F stores the raw JSON so lessons can be re-opened without AI costs.
  */
 function writeToLog_(status, details, request = null, lesson = null) {
   const props = PropertiesService.getScriptProperties();
@@ -3005,15 +2997,24 @@ function writeToLog_(status, details, request = null, lesson = null) {
       contentSummary = request;
     }
 
-    // Append to Spreadsheet (6 Columns total)
-    sheet.appendRow([
+    // 📦 Pack the data into a single row array
+    const rowData = [
       timestamp,      // A: Timestamp
       email,          // B: Email Address
       status,         // C: Status
       details,        // D: Details
       contentSummary, // E: Content Summary
       fullJsonData    // F: THE DATA VAULT (Hidden JSON)
-    ]);
+    ];
+
+    // 1. Append to the user-facing Logs tab
+    sheet.appendRow(rowData);
+    
+    // 🛡️ 2. THE NEW MASTER ARCHIVE LOGIC: Append to the permanent Master tab
+    const masterSheet = ss.getSheetByName("Master");
+    if (masterSheet) {
+      masterSheet.appendRow(rowData); 
+    }
     
   } catch (e) {
     console.error("Logging failed: " + e.toString());
@@ -3349,7 +3350,7 @@ function clearAllUserHistory() {
 
 
 /**
- * Fetches the user's profile and accurately counts their total generated lessons.
+ * Fetches the user's profile and accurately counts their total generated lessons from the Master tab.
  */
 function getUserProfile() {
   const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
@@ -3363,14 +3364,14 @@ function getUserProfile() {
   const row = profileData.find(r => r[0].toString().toLowerCase().trim() === userEmail);
 
   if (row) {
-    // 2. THE FIX: Calculate Total Lessons from the Logs tab
+    // 2. 🛡️ GAMIFICATION FIX: Calculate Total Lessons from the MASTER tab
     let lessonCount = 0;
-    const logSheet = ss.getSheetByName("Logs");
+    const masterSheet = ss.getSheetByName("Master");
     
-    if (logSheet) {
-      const logData = logSheet.getDataRange().getValues();
+    if (masterSheet) {
+      const masterData = masterSheet.getDataRange().getValues();
       // Filter for this user's email (Col B), successful generations (Col C), and valid data (Col F)
-      lessonCount = logData.filter(logRow => 
+      lessonCount = masterData.filter(logRow => 
         logRow[1] === userEmail && 
         logRow[2] === "SUCCESS" && 
         logRow[5] 
@@ -3383,7 +3384,7 @@ function getUserProfile() {
       grade: row[3],
       gender: row[4],   
       photoUrl: row[5], 
-      totalLessons: lessonCount // Now dynamically passing the real count!
+      totalLessons: lessonCount // Passes the permanent high score!
     };
   }
   
