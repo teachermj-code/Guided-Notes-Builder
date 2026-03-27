@@ -2996,8 +2996,7 @@ function writeToLog_(status, details, request = null, lesson = null) {
     else if (typeof request === 'string') {
       contentSummary = request;
     }
-
-    // 📦 Pack the data into a single row array
+// 📦 Pack the data into a single row array
     const rowData = [
       timestamp,      // A: Timestamp
       email,          // B: Email Address
@@ -3007,13 +3006,15 @@ function writeToLog_(status, details, request = null, lesson = null) {
       fullJsonData    // F: THE DATA VAULT (Hidden JSON)
     ];
 
-    // 1. Append to the user-facing Logs tab
-    sheet.appendRow(rowData);
+    // 1. Insert at the TOP of the user-facing Logs tab (Row 2)
+    sheet.insertRowAfter(1);
+    sheet.getRange(2, 1, 1, rowData.length).setValues([rowData]);
     
-    // 🛡️ 2. THE NEW MASTER ARCHIVE LOGIC: Append to the permanent Master tab
+    // 🛡️ 2. THE NEW MASTER ARCHIVE LOGIC: Insert at the TOP of the Master tab
     const masterSheet = ss.getSheetByName("Master");
     if (masterSheet) {
-      masterSheet.appendRow(rowData); 
+      masterSheet.insertRowAfter(1);
+      masterSheet.getRange(2, 1, 1, rowData.length).setValues([rowData]); 
     }
     
   } catch (e) {
@@ -3098,9 +3099,6 @@ function createBlanks_(text, vocabulary) {
 
 
 /**
- * Fetches the current user's generation history from the Logs sheet.
- */
-/**
  * Fetches ONLY the 5 most recent lessons for lightning-fast loading.
  */
 function getUserHistory() {
@@ -3122,8 +3120,8 @@ function getUserHistory() {
         summary: row[4],
         topic: row[4].split('|')[0].replace('TOPIC: ', '').trim(),
         fullJson: row[5] 
-      }))
-      .reverse(); 
+      }));
+      // 🛡️ Removed the .reverse() here because the newest items are now naturally at the top!
 
     // ONLY return the top 5 to keep the app blazing fast
     return history.slice(0, 5); 
@@ -3155,8 +3153,8 @@ function searchUserHistory(query) {
 
     let results = [];
 
-    // Loop backwards so we get newest first
-    for (let i = data.length - 1; i > 0; i--) {
+    // 🛡️ THE FIX: Loop FORWARDS because the newest items are now at the top of the sheet
+    for (let i = 1; i < data.length; i++) {
       const row = data[i];
       
       // Check if it belongs to this user and has data
