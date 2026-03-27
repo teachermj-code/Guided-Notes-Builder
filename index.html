@@ -18,6 +18,68 @@
 
 
   <style>
+
+        /* 🌅 Time-of-Day Backgrounds */
+    .hero-card.morning { background: linear-gradient(135deg, #e3f2fd 0%, #fff9c4 100%); color: #1a4b8c; }
+    .hero-card.afternoon { background: linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%); color: #873e23; }
+    .hero-card.evening { background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%); color: #ffffff; }
+
+    /* 🧠 Tactile Hover Life */
+    .btn, .stat-box, .quick-btn {
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
+    .btn:hover, .stat-box:hover {
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important;
+    }
+
+    /* 🏆 Badge Styling */
+    .level-badge {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(5px);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    .quote-area {
+      font-style: italic;
+      font-size: 13px;
+      opacity: 0.9;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(0,0,0,0.05);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+  /* --- QUICK START BUTTONS --- */
+    .quick-btn {
+      background: white;
+      border: 1px solid #d9e2ec;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .quick-btn:hover {
+      background: #f5f9ff;
+      border-color: #0052cc;
+      color: #0052cc;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 82, 204, 0.1);
+    }
     #scrollToTopBtn {
       position: fixed;
       bottom: 30px;
@@ -135,137 +197,226 @@
 
     }
 
-    .hero-dashboard-wrapper {
+/* --- ⚡ MODERN HERO DASHBOARD (UNIFIED COMMAND BAR) --- */
+
+.hero-dashboard-wrapper {
+  min-height: 165px; /* Stabilizer: Prevents page jump when shrinking */
   margin-bottom: 25px;
-  perspective: 1000px;
+  display: block;
+  position: relative;
 }
 
+#heroContainer {
+  position: sticky;
+  top: 10px; 
+  z-index: 1005; 
+  width: 100%;
+  /* 🛡️ FIX: Allows you to click the "Show Setup" button underneath the empty space */
+  pointer-events: none; 
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ⚡ THE SINGLE COHESIVE CARD */
 .hero-card {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  color: white;
-  padding: 30px;
-  border-radius: 24px;
-  border: 1px solid rgba(255,255,255,0.1);
-  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
-}
-
-.profile-badge {
+  background: #ffffff;
+  border: 1px solid #d9e2ec;
+  border-top: 5px solid #0f2747; 
+  border-radius: 20px;
+  box-shadow: 0 10px 25px -10px rgba(15, 39, 71, 0.1);
+  padding: 25px 30px; /* Roomier padding */
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
+  /* 🎯 FIX: Re-enables clicks for the buttons inside the card */
+  pointer-events: auto; 
+  transition: all 0.35s ease;
+  min-height: 145px; 
 }
 
+/* ⚡ INTERNAL PLACEMENT GROUPS */
+.group-identity { flex: 1; display: flex; align-items: center; gap: 18px; }
+
+.group-actions { 
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; /* 📏 FIX: Stacked for vertical breathing room */
+  align-items: center; 
+  justify-content: center; 
+  gap: 15px; 
+  border-left: 1px solid #e2e8f0; 
+  border-right: 1px solid #e2e8f0; 
+  padding: 0 25px; 
+}
+
+.group-quote { flex: 1.2; display: flex; align-items: center; gap: 12px; padding-left: 20px; }
+
+/* Setup Mode (Full Width Overwrite) */
+.hero-card.setup-mode {
+  text-align: center;
+  flex-direction: column;
+  background: linear-gradient(180deg, #ffffff 0%, #eef4ff 100%);
+  border-top: 6px solid var(--template-accent, #0052cc);
+  width: 100%;
+}
+
+/* 2. SCROLLED STATE (Compact & Slim) */
+#heroContainer.scrolled .hero-card {
+  padding: 10px 25px !important;
+  min-height: 75px !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 20px rgba(15, 39, 71, 0.12);
+}
+
+/* Switch back to row on scroll and hide non-essentials */
+#heroContainer.scrolled .group-actions { 
+  flex-direction: row !important; 
+  gap: 20px;
+  border: none;
+  padding: 0;
+}
+
+#heroContainer.scrolled .group-quote,
+#heroContainer.scrolled .hero-pill,
+#heroContainer.scrolled .stat-label,
+#heroContainer.scrolled .btn-label {
+  display: none !important;
+}
+
+#heroContainer.scrolled .avatar {
+  width: 42px !important;
+  height: 42px !important;
+}
+
+#heroContainer.scrolled .badge-text h2 {
+  font-size: 16px !important;
+  margin: 0 !important;
+}
+
+/* 3. THE SHELF LOGIC: Pushing content down so it doesn't hide behind the dashboard */
+#heroContainer.scrolled ~ .grid .panel {
+  top: 100px !important; 
+}
+
+#heroContainer.scrolled ~ .grid .preview-shell .preview-toolbar {
+  top: 85px !important; /* Aligns toolbar perfectly below the shrunk bar */
+}
+
+/* 4. DYNAMIC GAP LOGIC (Stabilized) */
+.grid {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 20px;
+  margin-top: 20px;
+  align-items: start;
+}
+#heroContainer.scrolled + .grid { margin-top: 20px !important; }
+
+/* 4. COMPONENT STYLES */
 .avatar {
-  width: 60px;
-  height: 60px;
-  background: var(--template-accent, #0052cc);
-  border-radius: 16px;
+  width: 70px;
+  height: 70px;
+  background: #0f2747;
+  color: white;
+  border-radius: 50% !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 28px;
+  font-weight: 800;
+  box-shadow: 0 8px 16px rgba(0, 82, 204, 0.2);
+  overflow: hidden;
+  position: relative;
 }
 
+.avatar img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.badge-text h2 {
+  margin: 0 0 5px 0;
+  font-size: 22px;
+  color: var(--brand-dark);
+  font-weight: 800;
+}
+
+.hero-pill {
+  background: rgba(15, 39, 71, 0.05);
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 39, 71, 0.1);
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* --- SETUP MODE FORM --- */
 .hero-form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  display: flex;
   gap: 12px;
-  margin-top: 20px;
+  margin-top: 10px;
+  width: 100%;
+  max-width: 800px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .hero-form-grid input, .hero-form-grid select {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.2);
-  color: white;
-  padding: 12px;
-  border-radius: 10px;
+  background: white;
+  border: 1px solid #c8d1dc;
+  color: var(--text);
+  padding: 12px 16px;
+  border-radius: 12px;
+  flex: 1;
+  min-width: 200px;
+  font-size: 14px;
+  outline: none;
 }
 
-.admin-gear {
-  background: rgba(255,255,255,0.1);
-  border: none;
-  color: white;
-  padding: 8px 15px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 12px;
+.hero-form-grid input:focus, .hero-form-grid select:focus {
+  border-color: #0052cc;
+  box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1);
 }
 
-    .hero {
+/* --- LOADING STATE --- */
+.hero-loading {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f4fa 100%);
+  border: 1px solid #d9e2ec;
+  padding: 45px;
+  border-radius: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 16px;
+  box-shadow: 0 12px 30px -10px rgba(15, 39, 71, 0.08);
+  animation: heroPulse 1.5s infinite ease-in-out;
+}
 
-      background: linear-gradient(180deg, #eaf8ff 0%, #d9f0fb 100%);
+@keyframes heroPulse {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
 
-      color: #12324a;
-
-      border: 1px solid #c7e3f0;
-
-      border-radius: 22px;
-
-      padding: 28px;
-
-      box-shadow: 0 8px 20px rgba(18, 50, 74, 0.08);
-
-    }
-
-    .hero-main {
-
-      width: 100%;
-
-      max-width: none;
-
-      margin: 0;
-
-    }
-
-    .hero-centered {
-
-      text-align: center;
-
-    }
-
-    .hero h1 {
-
-      margin: 0;
-
-      font-size: clamp(36px, 4.6vw, 52px);
-
-      line-height: 1.05;
-
-      letter-spacing: 0.03em;
-
-      font-weight: 800;
-
-      color: #12324a;
-
-    }
-
-    .hero p {
-
-      margin: 10px 0 0;
-
-      font-size: 14px;
-
-      line-height: 1.5;
-
-      color: #4f6b80;
-
-      letter-spacing: 0.015em;
-
-    }
-
+    /* --- PRESERVED GRID & PANEL STYLES --- */
     .grid {
       display: grid;
       grid-template-columns: 420px 1fr;
-      /* The standard 2-column view */
       gap: 20px;
       margin-top: 20px;
       align-items: start;
       transition: grid-template-columns 0.4s ease;
-      /* Smooth transition */
     }
 
-    /* Shared visual styles for both containers */
     .panel,
     .preview-shell {
       background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
@@ -274,25 +425,18 @@
       padding: 22px;
       box-shadow: 0 10px 28px rgba(15, 39, 71, 0.06);
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      /* Smooth slide/fade */
     }
 
-    /* SPECIFIC DEDICATED STYLES FOR THE SIDEBAR (PANEL) */
+/* 1. Simplify the Sidebar Panel */
     .panel {
       position: sticky;
-      top: 20px;
-      /* Gap from the top of the screen */
-      max-height: calc(100vh - 40px);
-      /* Ensures it never goes off-bottom */
+      top: 28px; /* Default starting position */
+      max-height: calc(100vh - 60px);
       overflow-y: auto;
-      /* Internal scrollbar if settings are too long */
-      scrollbar-width: thin;
-      /* Firefox */
-      scrollbar-color: #d7dfeb transparent;
-      /* Firefox */
+      z-index: 1000;
+      transition: top 0.3s ease-out; /* Makes the drop-down look smooth */
     }
 
-    /* Modern slim scrollbar for Chrome/Safari */
     .panel::-webkit-scrollbar {
       width: 5px;
     }
@@ -302,7 +446,6 @@
       border-radius: 10px;
     }
 
-    /* Collapsed state for Focus Mode */
     .panel.collapsed {
       margin-left: -440px;
       opacity: 0;
@@ -310,7 +453,6 @@
       pointer-events: none;
     }
 
-    /* Headings */
     .panel h2,
     .preview-title {
       margin: 0 0 14px;
@@ -319,7 +461,6 @@
       font-weight: 700;
     }
 
-    /* Internal cards within the Sidebar */
     .panel-section {
       border: 1px solid #e8edf6;
       background: #ffffff;
@@ -333,7 +474,6 @@
       margin-top: 0;
     }
 
-    /* Small labels like "CORE DETAILS" */
     .section-heading {
       margin: 0 0 12px;
       font-size: 12px;
@@ -343,11 +483,9 @@
       font-weight: 800;
     }
 
-    /* FIXES THE GAP: When this class is added, the 420px column disappears */
     .grid.full-width {
       grid-template-columns: 0fr 1fr !important;
       gap: 0;
-      /* Removes the 20px space between the hidden sidebar and content */
     }
 
     .preview-shell {
@@ -358,32 +496,31 @@
 
     }
 
+/* 2. Simplify the Preview Toolbar */
     .preview-toolbar {
       position: sticky;
-      top: 0;
-      /* Flush to the top - no more "walking under the bridge" */
+      top: 0; 
       z-index: 1000;
       display: flex;
       flex-direction: column;
       gap: 14px;
-
-      /* Remove the top margin so there's no gap above the toolbar */
       margin: 0 -22px 16px -22px;
-      /* The negative margins (-22px) pull it to the very edges of the preview-shell */
-
       padding: 16px 22px;
       background: #ffffff !important;
       border-bottom: 1px solid #e8edf6;
       border-top: 6px solid var(--template-accent, #0052cc);
-
-      /* Square top corners, rounded bottom corners */
       border-radius: 0 0 24px 24px;
-
-      backdrop-filter: none !important;
-      -webkit-backdrop-filter: none !important;
       box-shadow: 0 10px 15px -5px rgba(15, 39, 71, 0.1);
-      transition: all 0.4s ease;
+      transition: top 0.3s ease-out;
     }
+            /* ⚡ THE SHELF LOGIC: This pushes the panels down so they don't hide under the dashboard */
+        #heroContainer.scrolled ~ .grid .panel {
+          top: 90px !important; 
+        }
+
+        #heroContainer.scrolled ~ .grid .preview-shell .preview-toolbar {
+          top: 75px !important; 
+        }
 
     .preview-toolbar-top {
       display: flex;
@@ -1130,87 +1267,240 @@
 
   <div class="shell">
 
- <div id="heroContainer" class="hero-dashboard-wrapper">
+<div id="heroContainer" class="hero-dashboard-wrapper">
   <div class="hero-loading">Loading your dashboard...</div>
 </div>
 
 <script>
+  let globalProfile = null; // Cache the profile for instant loading!
+
   // Run this when the page loads
   window.addEventListener('load', function() {
     loadHeroState();
   });
 
-  function loadHeroState() {
-    google.script.run.withSuccessHandler(function(profile) {
-      const container = document.getElementById('heroContainer');
-      
-      if (!profile) {
-        // STATE A: Show Onboarding Setup
-        container.innerHTML = renderHeroSetupForm();
-      } else {
-        // STATE B: Show Dashboard
-        container.innerHTML = renderHeroDashboard(profile);
-        // ⚡ AUTO-FILL: Pre-fill your existing lesson form
-        if(document.getElementById('teacherName')) document.getElementById('teacherName').value = profile.name;
-        if(document.getElementById('schoolName')) document.getElementById('schoolName').value = profile.school;
-      }
-    }).getUserProfile();
+function getTeacherLevel(count) {
+  if (count < 5) return { title: "Novice Architect", next: 5, icon: "🌱" };
+  if (count < 15) return { title: "Lesson Pro", next: 15, icon: "🚀" };
+  if (count < 30) return { title: "Master Planner", next: 30, icon: "👑" };
+  return { title: "Grandmaster Educator", next: 100, icon: "💎" };
+}
+
+function getRandomQuote() {
+  const quotes = [
+    "“The art of teaching is the art of assisting discovery.”",
+    "“Teachers plant seeds that grow forever.”",
+    "“Lesson planning: because coffee alone isn't enough.”",
+    "“Every great teacher was once a beginner. Keep going!”",
+    "Pro-Tip: Use ‘Enrichment’ templates for your fast-finishers!",
+    "Pro-Tip: ‘Guided Notes’ are a lifesaver for student retention."
+  ];
+  return quotes[Math.floor(Math.random() * quotes.length)];
+}
+
+function loadHeroState() {
+    google.script.run
+      // 🛡️ Added a failure handler so you never get stuck on "Loading" blindly again
+      .withFailureHandler(function(error) {
+        console.error("Server Error:", error);
+        document.getElementById('heroContainer').innerHTML = `<div style="padding: 20px; color: #d32f2f;">System Error: ${error.message} <br>Please refresh the page.</div>`;
+      })
+      .withSuccessHandler(function(profile) {
+        globalProfile = profile; 
+        const container = document.getElementById('heroContainer');
+        const mainGrid = document.querySelector('.grid'); 
+        
+        if (!profile) {
+          if (mainGrid) mainGrid.style.display = 'none'; 
+          container.innerHTML = renderHeroSetupForm(); 
+        } else {
+          if (mainGrid) mainGrid.style.display = window.innerWidth <= 760 ? 'block' : 'grid'; 
+          container.innerHTML = renderHeroDashboard(profile); 
+          
+          if(document.getElementById('teacherName')) document.getElementById('teacherName').value = profile.name || '';
+          if(document.getElementById('schoolName')) document.getElementById('schoolName').value = profile.school || '';
+        }
+      }).getUserProfile();
   }
 
-  function renderHeroSetupForm() {
+ function renderHeroSetupForm() {
     return `
       <div class="hero-card setup-mode">
-        <div class="hero-text">
-          <h1>Welcome, Educator! 🎓</h1>
-          <p>Let's personalize your workspace. This info will auto-fill your lesson guides.</p>
+        <div class="hero-text" style="max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #0f2747; margin: 0 0 10px; font-size: 32px; font-weight: 800;">Welcome! 👋</h1>
+          <p style="color: #5b6b82; line-height: 1.5; margin-bottom: 20px;">Let's personalize your workspace to get started.</p>
         </div>
-        <div class="hero-form-grid">
-          <input type="text" id="setupName" placeholder="Full Name (e.g., Mr. Cruz)">
-          <input type="text" id="setupSchool" placeholder="School Name">
-          <select id="setupGrade">
-            <option value="Elementary">Elementary</option>
-            <option value="Junior High">Junior High</option>
-            <option value="Senior High">Senior High</option>
-          </select>
-          <button class="btn-primary" onclick="handleSaveProfile()">Save & Start Planning</button>
+        <div class="hero-form-grid" style="flex-direction: column; align-items: center; max-width: 600px; margin: 0 auto;">
+          <div style="display: flex; gap: 12px; width: 100%; flex-wrap: wrap;">
+            <input type="text" id="setupName" placeholder="Full Name (e.g., Mr. Cruz)">
+            <input type="text" id="setupSchool" placeholder="School Name">
+            <select id="setupGrade">
+              <option value="" disabled selected>Select Grade Level</option>
+              <option value="Elementary">Elementary</option>
+              <option value="Junior High">Junior High</option>
+              <option value="Senior High">Senior High</option>
+            </select>
+            <select id="setupGender">
+              <option value="Male" selected>Male (👨‍🏫)</option>
+              <option value="Female">Female (👩‍🏫)</option>
+            </select>
+          </div>
+          <div style="width: 100%; text-align: left; margin-top: 10px;">
+            <label style="font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Profile Picture (Optional)</label>
+            <input type="file" id="setupPhoto" accept="image/png, image/jpeg" style="width: 100%; padding: 8px; background: white; border-radius: 12px; border: 1px solid #c8d1dc;">
+          </div>
+          <button class="btn btn-primary" style="padding: 0 24px; margin-top: 15px;" onclick="handleSaveProfile()">Save & Start Planning</button>
         </div>
       </div>
     `;
   }
 
-  function renderHeroDashboard(profile) {
+function renderHeroDashboard(profile) {
+    const safeName = profile.name ? String(profile.name).trim() : "Teacher";
+    const hour = new Date().getHours();
+    let greeting = (hour < 12) ? "Good morning" : (hour < 18) ? "Good afternoon" : "Good evening";
+    const teacherIcon = (profile.gender === "Female") ? "👩‍🏫" : "👨‍🏫";
+    const quote = getRandomQuote();
+
     return `
-      <div class="hero-card dashboard-mode">
-        <div class="profile-badge">
-          <div class="avatar">${profile.name[0]}</div>
+      <div class="hero-card">
+        <div class="group-identity">
+          <div class="avatar">
+            ${profile.photoUrl ? `<img src="${profile.photoUrl}">` : safeName.charAt(0)}
+          </div>
           <div class="badge-text">
-            <h2>Welcome back, ${profile.name}!</h2>
-            <p>📍 ${profile.school} | 📚 ${profile.grade}</p>
+            <h2>${greeting}, ${safeName}!</h2>
+            <div style="display: flex; gap: 6px; margin-top: 4px;">
+              <span class="hero-pill">🏫 ${profile.school || 'School'}</span>
+              <span class="hero-pill">${teacherIcon} ${profile.grade || 'Level'}</span>
+            </div>
           </div>
         </div>
-        <div class="hero-stats">
-          <div class="stat-item">
-            <span class="stat-label">System Status</span>
-            <span class="stat-value">Ready ✅</span>
+
+        <div class="group-actions">
+          <div style="text-align: center;">
+            <span style="font-size: 26px; font-weight: 800; color: #0052cc; display: block; line-height: 1;">${profile.totalLessons || 0}</span>
+            <span class="stat-label">Lessons Created</span>
           </div>
-          ${profile.isAdmin ? '<button class="admin-gear" onclick="openAdmin()">⚙️ Admin Console</button>' : ''}
+          <div style="display: flex; gap: 10px;">
+            <button id="libraryBtnHero" class="btn btn-neutral" style="height: 40px; padding: 0 15px; font-size: 13px;" onclick="openLibrarySecurely()">
+              📁 Library
+            </button>
+            <button class="btn btn-neutral" style="height: 40px; padding: 0 15px; font-size: 13px;" onclick="openSlickProfileModal()">
+              ⚙️ <span class="btn-label" style="margin-left: 5px;">Settings</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="group-quote">
+          <span style="font-size: 20px;">📖</span>
+          <p style="margin:0; font-size: 16px; font-style: italic; color: #5b6b82; line-height: 1.4;">${quote}</p>
         </div>
       </div>
     `;
+}
+
+// Fixed Library Opener to match the new Button ID
+function openLibrarySecurely() {
+    const btn = document.getElementById('libraryBtnHero');
+    if (btn) btn.textContent = "Opening...";
+    
+    google.script.run.withSuccessHandler(function(url) {
+      if (btn) btn.textContent = "📁 Library";
+      window.open(url, '_blank');
+    }).getUserLibraryUrl();
+}
+
+  // ⚙️ INSTANT MODAL OPENER
+function openSlickProfileModal() {
+    document.getElementById('slickProfileModal').style.display = 'flex';
+    if (globalProfile) {
+      document.getElementById('modalName').value = globalProfile.name || '';
+      document.getElementById('modalSchool').value = globalProfile.school || '';
+      document.getElementById('modalGrade').value = globalProfile.grade || '';
+      document.getElementById('modalGender').value = globalProfile.gender || 'Male'; // Load gender
+    }
   }
 
-  function handleSaveProfile() {
-    const data = {
-      name: document.getElementById('setupName').value,
-      school: document.getElementById('setupSchool').value,
-      grade: document.getElementById('setupGrade').value
+  function closeSlickProfileModal() {
+    document.getElementById('slickProfileModal').style.display = 'none';
+  }
+
+// First time save OR Modal Save Logic
+function handleSaveProfile(isModal = false) {
+  const btn = isModal ? document.getElementById('modalSaveBtn') : document.querySelector('.setup-mode .btn-primary');
+  const fileInput = document.getElementById(isModal ? 'modalPhoto' : 'setupPhoto');
+  const file = fileInput ? fileInput.files[0] : null;
+
+  // 1. Create the data object ONCE
+  const data = {
+    name: document.getElementById(isModal ? 'modalName' : 'setupName').value,
+    school: document.getElementById(isModal ? 'modalSchool' : 'setupSchool').value,
+    grade: document.getElementById(isModal ? 'modalGrade' : 'setupGrade').value,
+    gender: document.getElementById(isModal ? 'modalGender' : 'setupGender').value,
+    photoData: null,
+    photoMimeType: null,
+    photoName: null
+  };
+
+  // 2. Validation: Check File Size & Type
+  if (file) {
+    if (!file.type.startsWith('image/')) {
+      alert("Please upload a valid image file (JPG, PNG, etc).");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) { 
+      alert("File is too large. Maximum size is 10MB.");
+      return;
+    }
+  }
+
+  if (btn) { 
+    btn.textContent = "Saving..."; 
+    btn.disabled = true; 
+  }
+
+  // 3. Logic for handling the save (with or without photo)
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      data.photoData = e.target.result.split(',')[1]; 
+      data.photoMimeType = file.type;
+      data.photoName = file.name;
+      google.script.run.withSuccessHandler(finalizeSave).saveUserProfile(data);
     };
-    google.script.run.withSuccessHandler(loadHeroState).saveUserProfile(data);
+    reader.readAsDataURL(file);
+  } else {
+    google.script.run.withSuccessHandler(finalizeSave).saveUserProfile(data);
+  }
+
+  function finalizeSave() {
+    if (isModal) closeSlickProfileModal();
+    loadHeroState(); 
+    if (btn) {
+      btn.textContent = isModal ? "Save Changes" : "Save & Start Planning";
+      btn.disabled = false;
+    }
+    if (fileInput) {
+      fileInput.value = ""; 
+    }
+  }
+}
+  // ⚡ 1-Click Quick Start Logic (kept just in case you use it elsewhere)
+  function quickStart(templateValue) {
+    showView('setup'); 
+    document.getElementById('templateType').value = templateValue; 
+    
+    const dropdown = document.getElementById('templateType');
+    dropdown.style.boxShadow = "0 0 0 4px rgba(0, 200, 83, 0.3)";
+    setTimeout(() => { dropdown.style.boxShadow = "none"; }, 800);
+
+    document.getElementById('topic').focus();
   }
 </script>
-    </div>
+  
 
-    <div class="grid">
+    <div class="grid" style="display: none;">
 
       <div class="panel">
 
@@ -1428,7 +1718,7 @@
 
               <button id="printTeacherBtn" class="btn btn-alt" onclick="printLesson('TEACHER')" disabled>Export Teacher PDF</button>
               <button id="saveDriveBtn" class="btn btn-alt" onclick="saveToDrive()" disabled>Save to Drive</button>
-              <button id="openFolderBtn" class="btn btn-neutral" onclick="openDriveFolder()" disabled>Open Folder</button>
+            
 
             </div>
 
@@ -1485,10 +1775,6 @@ let confirmCallback = null;
       confirmCallback = null;
     }
 
-    // Link the "Yes" button in the modal to the logic
-    document.getElementById('confirmYesBtn').onclick = function() {
-      closeCustomConfirm(true);
-    };
 
 
 function reopenLesson(jsonString) {
@@ -1758,7 +2044,6 @@ function saveToDrive() {
   }
   
   const saveBtn = document.getElementById('saveDriveBtn');
-  const openBtn = document.getElementById('openFolderBtn');
   
   saveBtn.disabled = true;
   saveBtn.textContent = "Processing PDF...";
@@ -1840,24 +2125,6 @@ function printLesson(copyMode) {
     });
 }
 
-/**
- * Opens the specific Google Drive folder in a new tab
- */
-function openDriveFolder() {
-  if (lastFolderUrl) {
-    window.open(lastFolderUrl, '_blank');
-  } else {
-    setStatus("Please save a file first to locate the folder.", "warn");
-  }
-}
-
-function openDriveFolder() {
-  if (lastFolderUrl) {
-    window.open(lastFolderUrl, '_blank');
-  } else {
-    setStatus("Please save a file first to locate the folder.", "warn");
-  }
-}
 
     // --- CORE INITIALIZATION ---
 
@@ -2193,16 +2460,34 @@ function checkAnswer(index) {
   document.documentElement.scrollTop = 0;
 }
 
-    window.onscroll = function() {
-      const btn = document.getElementById('scrollToTopBtn');
-      if (document.documentElement.scrollTop > 300) {
-        btn.classList.add('scroll-btn-show');
-        btn.classList.remove('scroll-btn-hide');
-      } else {
-        btn.classList.add('scroll-btn-hide');
-        btn.classList.remove('scroll-btn-show');
-      }
-    };
+window.onscroll = function() {
+  const btn = document.getElementById('scrollToTopBtn');
+  const hero = document.getElementById('heroContainer');
+  const scrollPos = document.documentElement.scrollTop || document.body.scrollTop;
+
+  // 1. Scroll-to-Top Button Visibility
+  if (scrollPos > 300) {
+    btn.classList.add('scroll-btn-show');
+    btn.classList.remove('scroll-btn-hide');
+  } else {
+    btn.classList.add('scroll-btn-hide');
+    btn.classList.remove('scroll-btn-show');
+  }
+
+  // 2. ⚡ ANTI-FLICKER LOGIC
+  if (hero && globalProfile) {
+    const isScrolled = hero.classList.contains('scrolled');
+
+    // Thresholds: We "Shrink" at 100px, but only "Grow" back at 20px.
+    // This 80px gap is the "Dead Zone" that stops the flickering.
+    if (!isScrolled && scrollPos > 100) {
+      hero.classList.add('scrolled');
+    } 
+    else if (isScrolled && scrollPos < 20) {
+      hero.classList.remove('scrolled');
+    }
+  }
+};
 
     // Mobile Menu Mappings
     function toggleDensity() { 
@@ -2279,7 +2564,7 @@ function showSuccessCelebration() {
     
     <div style="display:flex; gap:12px; justify-content:center;">
       <button onclick="closeCustomConfirm(false)" class="btn btn-neutral" style="flex:1; padding:12px; border-radius:12px; font-weight:600;">Cancel</button>
-      <button id="confirmYesBtn" class="btn btn-primary" style="flex:1; padding:12px; border-radius:12px; font-weight:600; background:#dc2626; border-color:#dc2626; color:white;">Yes, Proceed</button>
+      <button id="confirmYesBtn" onclick="closeCustomConfirm(true)" class="btn btn-primary" style="flex:1; padding:12px; border-radius:12px; font-weight:600; background:#dc2626; border-color:#dc2626; color:white;">Yes, Proceed</button>
     </div>
   </div>
 </div>
@@ -2307,8 +2592,50 @@ function showSuccessCelebration() {
       </div>
     </div>
 
+    <div id="slickProfileModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 39, 71, 0.7); z-index:9999; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
+  <div style="background:white; padding:30px; border-radius:24px; width:90%; max-width:450px; text-align:left; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); animation: modalPop 0.2s ease-out;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h3 style="margin:0; font-size:22px; color:#0f2747; font-weight:800;">Edit Profile 🎓</h3>
+      <button onclick="closeSlickProfileModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#cbd5e1;">✕</button>
+    </div>
+    
+    <div style="display:flex; flex-direction:column; gap:15px;">
+      <div class="field" style="margin:0;">
+        <label>Full Name</label>
+        <input type="text" id="modalName" placeholder="e.g., Mr. Cruz">
+      </div>
+      <div class="field" style="margin:0;">
+        <label>School Name</label>
+        <input type="text" id="modalSchool" placeholder="School Name">
+      </div>
+      <div class="field" style="margin:0;">
+        <label>Grade Level</label>
+        <select id="modalGrade">
+          <option value="Elementary">Elementary</option>
+          <option value="Junior High">Junior High</option>
+          <option value="Senior High">Senior High</option>
+        </select>
+      </div>
+      <div class="field" style="margin:0;">
+        <label>Gender</label>
+        <select id="modalGender">
+          <option value="Male">Male (👨‍🏫)</option>
+          <option value="Female">Female (👩‍🏫)</option>
+        </select>
+      </div>
+      <div class="field" style="margin:0;">
+        <label>Profile Picture</label>
+        <input type="file" id="modalPhoto" accept="image/png, image/jpeg" style="padding: 10px; border: 1px dashed #0052cc; background: #f0f7ff;">
+      </div>
+      
+      <div style="display:flex; gap:10px; margin-top: 10px;">
+        <button class="btn btn-neutral" style="flex:1;" onclick="closeSlickProfileModal()">Cancel</button>
+        <button id="modalSaveBtn" class="btn btn-primary" style="flex:2;" onclick="handleSaveProfile(true)">Save Changes</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
   </body> </html>
-
-</body>
-
-</html>

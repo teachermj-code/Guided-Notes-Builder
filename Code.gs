@@ -2618,6 +2618,22 @@ function buildPrintableDocument_(bodyHtml, options) {
         <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
         <script>
+
+        // Opens the Google Drive folder in a new tab
+  function openUserLibrary(profileFolderUrl) {
+    // 1st Priority: If the backend saved their permanent folder URL to their profile, use it!
+    if (profileFolderUrl && profileFolderUrl !== 'undefined' && profileFolderUrl !== 'null') {
+      window.open(profileFolderUrl, '_blank');
+    } 
+    // 2nd Priority: If they just generated and saved a lesson in this session, use that URL
+    else if (typeof lastFolderUrl !== 'undefined' && lastFolderUrl !== "") {
+      window.open(lastFolderUrl, '_blank');
+    } 
+    // Fallback: If they haven't saved anything yet
+    else {
+      alert("Your Google Drive library folder will be created and linked the first time you save a lesson to Drive!");
+    }
+  }
           function renderMathForPrint() {
             if (typeof renderMathInElement !== 'function') {
               window.setTimeout(renderMathForPrint, 150);
@@ -3229,9 +3245,7 @@ function saveLessonToDrive(lessonObj, requestObj, copyModeStr, filenameStr) {
     });
 
     // Setup Drive Folder
-    const folderName = "Lesson Guide by Teacher MJ - PDF";
-    const folders = DriveApp.getFoldersByName(folderName);
-    const folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+      const folder = getOrCreateUserFolder();
     
     // Create and Save PDF
     const blob = Utilities.newBlob(finalHtml, 'text/html', filenameStr || 'lesson.pdf')
@@ -3274,9 +3288,7 @@ function createPdfFromHtml(htmlString, filename) {
       </html>
     `;
 
-    const folderName = "Lesson Guide by Teacher MJ - PDF";
-    const folders = DriveApp.getFoldersByName(folderName);
-    const folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+const folder = getOrCreateUserFolder();
 
     const blob = Utilities.newBlob(fullHtml, 'text/html', filename || 'lesson.pdf')
                           .getAs('application/pdf');
@@ -3337,52 +3349,134 @@ function clearAllUserHistory() {
 
 
 /**
- * Fetches the user's profile. Returns null if they haven't set it up.
+ * Fetches the user's profile with case-insensitive email matching.
  */
 function getUserProfile() {
-  const email = Session.getActiveUser().getEmail();
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  let sheet = ss.getSheetByName("Profiles");
-  
-  // Create the sheet if it doesn't exist yet
-  if (!sheet) {
-    sheet = ss.insertSheet("Profiles");
-    sheet.appendRow(["Email", "Name", "School", "Grade/Department", "JoinDate"]);
-    return null;
-  }
+  const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
+  const userEmail = Session.getActiveUser().getEmail().toLowerCase().trim();
+  const sheet = ss.getSheetByName("Profiles");
+  if (!sheet) return null;
 
   const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0].toLowerCase() === email.toLowerCase()) {
-      return {
-        name: data[i][1],
-        school: data[i][2],
-        grade: data[i][3],
-        isAdmin: email === "your-admin-email@gmail.com" // Set your email here
-      };
-    }
+  const row = data.find(r => r[0].toString().toLowerCase().trim() === userEmail);
+
+  if (row) {
+    return {
+      name: row[1],
+      school: row[2],
+      grade: row[3],
+      gender: row[4],   // Column E
+      photoUrl: row[5], // Column F
+      totalLessons: 0   // Calculated below
+    };
   }
   return null;
 }
 
 /**
- * Saves or updates the user's profile
+ * Saves profile and ensures photo/data columns align with getUserProfile
  */
 function saveUserProfile(profileData) {
-  const email = Session.getActiveUser().getEmail();
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const email = Session.getActiveUser().getEmail().toLowerCase().trim();
+  const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
   const sheet = ss.getSheetByName("Profiles");
+
+  let newPhotoUrl = null;
+  if (profileData.photoData) {
+    const folder = DriveApp.getFoldersByName("Teacher App Profiles").hasNext() ? 
+                   DriveApp.getFoldersByName("Teacher App Profiles").next() : 
+                   DriveApp.createFolder("Teacher App Profiles");
+
+    // Cleanup old photos
+    const existingFiles = folder.searchFiles("title contains '" + email + "'");
+    while (existingFiles.hasNext()) { existingFiles.next().setTrashed(true); }
+
+    const blob = Utilities.newBlob(Utilities.base64Decode(profileData.photoData), profileData.photoMimeType, email + " - dp");
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    newPhotoUrl = "https://drive.google.com/thumbnail?id=" + file.getId() + "&sz=w500";
+  }
+
   const data = sheet.getDataRange().getValues();
-  
-  const rowData = [email, profileData.name, profileData.school, profileData.grade, new Date()];
-  
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0].toLowerCase() === email.toLowerCase()) {
-      sheet.getRange(i + 1, 1, 1, 5).setValues([rowData]);
-      return { success: true };
-    }
+  let rowIndex = data.findIndex(row => row[0].toString().toLowerCase().trim() === email) + 1;
+
+  if (rowIndex > 0) {
+    // Update existing: B:Name, C:School, D:Grade, E:Gender
+    sheet.getRange(rowIndex, 2, 1, 4).setValues([[profileData.name, profileData.school, profileData.grade, profileData.gender]]);
+    if (newPhotoUrl) sheet.getRange(rowIndex, 6).setValue(newPhotoUrl); // Col F: Photo
+  } else {
+    // New Row: Email(A), Name(B), School(C), Grade(D), Gender(E), Photo(F), JoinDate(G)
+    sheet.appendRow([email, profileData.name, profileData.school, profileData.grade, profileData.gender, newPhotoUrl || "", new Date()]);
+  }
+  return { success: true };
+}
+/**
+ * Reliably fetches the user's PDF folder
+ */
+function getUserLibraryUrl() {
+const folder = getOrCreateUserFolder();
+  return folder.getUrl();
+}
+
+/**
+ * Creates or retrieves a personal subfolder for the user
+ */
+function getOrCreateUserFolder() {
+  const email = Session.getActiveUser().getEmail();
+  const masterFolderName = "App Users - Lesson Guides";
+  const userFolderName = email + " - Guides";
+
+  // 1. Find or create Master Folder
+  let masterFolder;
+  const masterFolders = DriveApp.getFoldersByName(masterFolderName);
+  if (masterFolders.hasNext()) {
+    masterFolder = masterFolders.next();
+  } else {
+    masterFolder = DriveApp.createFolder(masterFolderName);
+  }
+
+  // 2. Find or create Personal Subfolder
+  let userFolder;
+  const userFolders = masterFolder.getFoldersByName(userFolderName);
+  if (userFolders.hasNext()) {
+    userFolder = userFolders.next();
+  } else {
+    userFolder = masterFolder.createFolder(userFolderName);
   }
   
-  sheet.appendRow(rowData);
-  return { success: true };
+  // 🔒 THE PERMISSION FIX: Enforce strict privacy every time
+  // This retroactively fixes old public folders AND secures new ones.
+  userFolder.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
+  userFolder.addEditor(email); // Give ONLY this specific user access
+  
+  return userFolder;
+}
+
+/**
+ * Updates the Library button to open the personal folder
+ */
+function getUserLibraryUrl() {
+  return getOrCreateUserFolder().getUrl();
+}
+
+function fixProfileSheetColumns() {
+  const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
+  const sheet = ss.getSheetByName("Profiles");
+  
+  // 1. Insert a new column at E for Gender
+  sheet.insertColumnBefore(5); 
+  
+  // 2. Update Headers
+  // New Header: Email(A) | Name(B) | School(C) | Grade(D) | Gender(E) | Photo(F) | JoinDate(G)
+  sheet.getRange("E1:G1").setValues([["Gender", "Photo", "JoinDate"]]);
+  
+  // 3. Move the old 'profilepic' data (which was in F, but shifted to G) back to F
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    const oldPhotoData = sheet.getRange(2, 7, lastRow - 1, 1).getValues(); // Get shifted photos
+    sheet.getRange(2, 6, lastRow - 1, 1).setValues(oldPhotoData); // Put in F
+    sheet.getRange(2, 7, lastRow - 1, 1).clearContent(); // Clear G to keep it for JoinDate
+  }
+  
+  console.log("Sheet reorganized! Column E is now Gender, F is Photo, G is JoinDate.");
 }
