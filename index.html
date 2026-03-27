@@ -234,10 +234,10 @@
 }
 
 /* ⚡ INTERNAL PLACEMENT GROUPS */
-.group-identity { flex: 1; display: flex; align-items: center; gap: 18px; }
+.group-identity { flex: 1.4; display: flex; align-items: center; gap: 18px; }
 
 .group-actions { 
-  flex: 1; 
+  flex: 0.8; 
   display: flex; 
   flex-direction: column; /* 📏 FIX: Stacked for vertical breathing room */
   align-items: center; 
@@ -245,7 +245,7 @@
   gap: 15px; 
   border-left: 1px solid #e2e8f0; 
   border-right: 1px solid #e2e8f0; 
-  padding: 0 25px; 
+  padding: 0 15px; 
 }
 
 .group-quote { flex: 1.2; display: flex; align-items: center; gap: 12px; padding-left: 20px; }
@@ -1283,7 +1283,8 @@ function getTeacherLevel(count) {
   if (count < 5) return { title: "Novice Architect", next: 5, icon: "🌱" };
   if (count < 15) return { title: "Lesson Pro", next: 15, icon: "🚀" };
   if (count < 30) return { title: "Master Planner", next: 30, icon: "👑" };
-  return { title: "Grandmaster Educator", next: 100, icon: "💎" };
+  if (count < 100) return { title: "Grandmaster Educator", next: 100, icon: "💎" };
+  return { title: "Legendary Teacher", next: Infinity, icon: "🌟" };
 }
 
 function getRandomQuote() {
@@ -1356,48 +1357,56 @@ function loadHeroState() {
   }
 
 function renderHeroDashboard(profile) {
-    const safeName = profile.name ? String(profile.name).trim() : "Teacher";
-    const hour = new Date().getHours();
-    let greeting = (hour < 12) ? "Good morning" : (hour < 18) ? "Good afternoon" : "Good evening";
-    const teacherIcon = (profile.gender === "Female") ? "👩‍🏫" : "👨‍🏫";
-    const quote = getRandomQuote();
+  const safeName = profile.name ? String(profile.name).trim() : "Teacher";
+  const hour = new Date().getHours();
+  let greeting = (hour < 12) ? "Good morning" : (hour < 18) ? "Good afternoon" : "Good evening";
+  const teacherIcon = (profile.gender === "Female") ? "👩‍🏫" : "👨‍🏫";
+  const quote = getRandomQuote();
 
-    return `
-      <div class="hero-card">
-        <div class="group-identity">
-          <div class="avatar">
-            ${profile.photoUrl ? `<img src="${profile.photoUrl}">` : safeName.charAt(0)}
-          </div>
-          <div class="badge-text">
-            <h2>${greeting}, ${safeName}!</h2>
-            <div style="display: flex; gap: 6px; margin-top: 4px;">
-              <span class="hero-pill">🏫 ${profile.school || 'School'}</span>
-              <span class="hero-pill">${teacherIcon} ${profile.grade || 'Level'}</span>
-            </div>
-          </div>
+  // 🎮 GAMIFICATION LOGIC
+  const lessons = profile.totalLessons || 0;
+  const level = getTeacherLevel(lessons);
+  const toNextLevel = level.next === Infinity ? "Max Rank!" : `${level.next - lessons} to next`;
+
+  return `
+    <div class="hero-card">
+      <div class="group-identity">
+        <div class="avatar">
+          ${profile.photoUrl ? `<img src="${profile.photoUrl}">` : safeName.charAt(0)}
         </div>
-
-        <div class="group-actions">
-          <div style="text-align: center;">
-            <span style="font-size: 26px; font-weight: 800; color: #0052cc; display: block; line-height: 1;">${profile.totalLessons || 0}</span>
-            <span class="stat-label">Lessons Created</span>
+        <div class="badge-text">
+          <h2>${greeting}, ${safeName}!</h2>
+          <div style="display: flex; gap: 6px; margin-top: 4px; white-space: nowrap;">
+            <span class="hero-pill">🏫 ${profile.school || 'School'}</span>
+            <span class="hero-pill">${teacherIcon} ${profile.grade || 'Level'}</span>
+            <span class="hero-pill" style="background: #f0fdfa; color: #0f766e; border-color: #ccfbf1; font-weight: 800;">
+              ${level.icon} ${level.title}
+            </span>
           </div>
-          <div style="display: flex; gap: 10px;">
-            <button id="libraryBtnHero" class="btn btn-neutral" style="height: 40px; padding: 0 15px; font-size: 13px;" onclick="openLibrarySecurely()">
-              📁 Library
-            </button>
-            <button class="btn btn-neutral" style="height: 40px; padding: 0 15px; font-size: 13px;" onclick="openSlickProfileModal()">
-              ⚙️ <span class="btn-label" style="margin-left: 5px;">Settings</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="group-quote">
-          <span style="font-size: 20px;">📖</span>
-          <p style="margin:0; font-size: 16px; font-style: italic; color: #5b6b82; line-height: 1.4;">${quote}</p>
         </div>
       </div>
-    `;
+
+      <div class="group-actions">
+        <div style="text-align: center;">
+          <span style="font-size: 26px; font-weight: 800; color: #0052cc; display: block; line-height: 1;">${lessons}</span>
+          <span class="stat-label">Created • ${toNextLevel}</span>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button id="libraryBtnHero" class="btn btn-neutral" style="height: 40px; padding: 0 15px; font-size: 13px;" onclick="openLibrarySecurely()">
+            📁 Library
+          </button>
+          <button class="btn btn-neutral" style="height: 40px; padding: 0 15px; font-size: 13px;" onclick="openSlickProfileModal()">
+            ⚙️ <span class="btn-label" style="margin-left: 5px;">Settings</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="group-quote">
+        <span style="font-size: 20px;">📖</span>
+        <p style="margin:0; font-size: 15px; font-style: italic; color: #5b6b82; line-height: 1.4;">${quote}</p>
+      </div>
+    </div>
+  `;
 }
 
 // Fixed Library Opener to match the new Button ID

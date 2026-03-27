@@ -3349,27 +3349,44 @@ function clearAllUserHistory() {
 
 
 /**
- * Fetches the user's profile with case-insensitive email matching.
+ * Fetches the user's profile and accurately counts their total generated lessons.
  */
 function getUserProfile() {
   const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
   const userEmail = Session.getActiveUser().getEmail().toLowerCase().trim();
-  const sheet = ss.getSheetByName("Profiles");
-  if (!sheet) return null;
+  
+  // 1. Get the User's Profile Info
+  const profileSheet = ss.getSheetByName("Profiles");
+  if (!profileSheet) return null;
 
-  const data = sheet.getDataRange().getValues();
-  const row = data.find(r => r[0].toString().toLowerCase().trim() === userEmail);
+  const profileData = profileSheet.getDataRange().getValues();
+  const row = profileData.find(r => r[0].toString().toLowerCase().trim() === userEmail);
 
   if (row) {
+    // 2. THE FIX: Calculate Total Lessons from the Logs tab
+    let lessonCount = 0;
+    const logSheet = ss.getSheetByName("Logs");
+    
+    if (logSheet) {
+      const logData = logSheet.getDataRange().getValues();
+      // Filter for this user's email (Col B), successful generations (Col C), and valid data (Col F)
+      lessonCount = logData.filter(logRow => 
+        logRow[1] === userEmail && 
+        logRow[2] === "SUCCESS" && 
+        logRow[5] 
+      ).length;
+    }
+
     return {
       name: row[1],
       school: row[2],
       grade: row[3],
-      gender: row[4],   // Column E
-      photoUrl: row[5], // Column F
-      totalLessons: 0   // Calculated below
+      gender: row[4],   
+      photoUrl: row[5], 
+      totalLessons: lessonCount // Now dynamically passing the real count!
     };
   }
+  
   return null;
 }
 
