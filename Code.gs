@@ -2953,16 +2953,8 @@ function hasAny_(text, keys) { return keys.some(k => text.includes(k)); }
 function guidance_(lines) { return lines.map(line => `- ${line}`).join('\n'); }
 
 /**
- * Records app activity to the Logs tab.
- * Columns: Timestamp | Email Address | Status | Details | GeneratedContent
- */
-/**
- * Records app activity to the Logs tab.
- * Enhanced to act as a database for generated lessons.
- */
-/**
- * Records app activity to the Logs tab.
- * Column F now stores the raw JSON so lessons can be re-opened without AI costs.
+ * Records app activity to the Logs tab AND the permanent Master tab.
+ * Column F stores the raw JSON so lessons can be re-opened without AI costs.
  */
 function writeToLog_(status, details, request = null, lesson = null) {
   const props = PropertiesService.getScriptProperties();
@@ -3004,16 +2996,26 @@ function writeToLog_(status, details, request = null, lesson = null) {
     else if (typeof request === 'string') {
       contentSummary = request;
     }
-
-    // Append to Spreadsheet (6 Columns total)
-    sheet.appendRow([
+    
+// 📦 Pack the data into a single row array
+    const rowData = [
       timestamp,      // A: Timestamp
       email,          // B: Email Address
       status,         // C: Status
       details,        // D: Details
       contentSummary, // E: Content Summary
       fullJsonData    // F: THE DATA VAULT (Hidden JSON)
-    ]);
+    ];
+
+    // 1. Insert at the TOP of the user-facing Logs tab (Row 2) so dashboard is fast
+    sheet.insertRowAfter(1);
+    sheet.getRange(2, 1, 1, rowData.length).setValues([rowData]);
+    
+    // 🛡️ 2. THE MASTER ARCHIVE LOGIC: Append to the bottom to avoid the Table Header error!
+    const masterSheet = ss.getSheetByName("Master");
+    if (masterSheet) {
+      masterSheet.appendRow(rowData); 
+    }
     
   } catch (e) {
     console.error("Logging failed: " + e.toString());
@@ -3097,9 +3099,6 @@ function createBlanks_(text, vocabulary) {
 
 
 /**
- * Fetches the current user's generation history from the Logs sheet.
- */
-/**
  * Fetches ONLY the 5 most recent lessons for lightning-fast loading.
  */
 function getUserHistory() {
@@ -3121,8 +3120,8 @@ function getUserHistory() {
         summary: row[4],
         topic: row[4].split('|')[0].replace('TOPIC: ', '').trim(),
         fullJson: row[5] 
-      }))
-      .reverse(); 
+      }));
+      // 🛡️ Removed the .reverse() here because the newest items are now naturally at the top!
 
     // ONLY return the top 5 to keep the app blazing fast
     return history.slice(0, 5); 
@@ -3154,8 +3153,8 @@ function searchUserHistory(query) {
 
     let results = [];
 
-    // Loop backwards so we get newest first
-    for (let i = data.length - 1; i > 0; i--) {
+    // 🛡️ THE FIX: Loop FORWARDS because the newest items are now at the top of the sheet
+    for (let i = 1; i < data.length; i++) {
       const row = data[i];
       
       // Check if it belongs to this user and has data
@@ -3349,27 +3348,44 @@ function clearAllUserHistory() {
 
 
 /**
- * Fetches the user's profile with case-insensitive email matching.
+ * Fetches the user's profile and accurately counts their total generated lessons from the Master tab.
  */
 function getUserProfile() {
   const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
   const userEmail = Session.getActiveUser().getEmail().toLowerCase().trim();
-  const sheet = ss.getSheetByName("Profiles");
-  if (!sheet) return null;
+  
+  // 1. Get the User's Profile Info
+  const profileSheet = ss.getSheetByName("Profiles");
+  if (!profileSheet) return null;
 
-  const data = sheet.getDataRange().getValues();
-  const row = data.find(r => r[0].toString().toLowerCase().trim() === userEmail);
+  const profileData = profileSheet.getDataRange().getValues();
+  const row = profileData.find(r => r[0].toString().toLowerCase().trim() === userEmail);
 
   if (row) {
+    // 2. 🛡️ GAMIFICATION FIX: Calculate Total Lessons from the MASTER tab
+    let lessonCount = 0;
+    const masterSheet = ss.getSheetByName("Master");
+    
+    if (masterSheet) {
+      const masterData = masterSheet.getDataRange().getValues();
+      // Filter for this user's email (Col B), successful generations (Col C), and valid data (Col F)
+      lessonCount = masterData.filter(logRow => 
+        logRow[1] === userEmail && 
+        logRow[2] === "SUCCESS" && 
+        logRow[5] 
+      ).length;
+    }
+
     return {
       name: row[1],
       school: row[2],
       grade: row[3],
-      gender: row[4],   // Column E
-      photoUrl: row[5], // Column F
-      totalLessons: 0   // Calculated below
+      gender: row[4],   
+      photoUrl: row[5], 
+      totalLessons: lessonCount // Passes the permanent high score!
     };
   }
+  
   return null;
 }
 
