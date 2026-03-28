@@ -2996,6 +2996,7 @@ function writeToLog_(status, details, request = null, lesson = null) {
     else if (typeof request === 'string') {
       contentSummary = request;
     }
+    
 // 📦 Pack the data into a single row array
     const rowData = [
       timestamp,      // A: Timestamp
@@ -3006,15 +3007,14 @@ function writeToLog_(status, details, request = null, lesson = null) {
       fullJsonData    // F: THE DATA VAULT (Hidden JSON)
     ];
 
-    // 1. Insert at the TOP of the user-facing Logs tab (Row 2)
+    // 1. Insert at the TOP of the user-facing Logs tab (Row 2) so dashboard is fast
     sheet.insertRowAfter(1);
     sheet.getRange(2, 1, 1, rowData.length).setValues([rowData]);
     
-    // 🛡️ 2. THE NEW MASTER ARCHIVE LOGIC: Insert at the TOP of the Master tab
+    // 🛡️ 2. THE MASTER ARCHIVE LOGIC: Append to the bottom to avoid the Table Header error!
     const masterSheet = ss.getSheetByName("Master");
     if (masterSheet) {
-      masterSheet.insertRowAfter(1);
-      masterSheet.getRange(2, 1, 1, rowData.length).setValues([rowData]); 
+      masterSheet.appendRow(rowData); 
     }
     
   } catch (e) {
